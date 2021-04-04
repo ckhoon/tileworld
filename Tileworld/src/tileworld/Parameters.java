@@ -21,7 +21,7 @@ public class Parameters {
     public static final long endTime = 5000; //no effect with gui
 
     //Agent Parameters
-    public static final int defaultFuelLevel = 500;
+    public static final int defaultFuelLevel = 5000;
     public static final int defaultSensorRange = 3;
 
     //Environment Parameters

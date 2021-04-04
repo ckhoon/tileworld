@@ -131,6 +131,25 @@ public class TWAgentWorkingMemory {
 			updateClosest(o);
 
 		}
+
+		// clear old memory of the region. ex: previously sensed a tile at location (x,y), but the newest sensing do not sense it, need to remove it from memory
+		for (int x = Math.max(me.getX() - Parameters.defaultSensorRange, 0); x <= Math.min(me.getX() + Parameters.defaultSensorRange, objects[0].length - 1); x++) {
+			for (int y = Math.max(me.getY() - Parameters.defaultSensorRange, 0); y <= Math.min(me.getY() + Parameters.defaultSensorRange, objects[0].length - 1); y++) {
+				if (objects[x][y] == null) continue;
+				boolean disappeared = true;
+				for (int i = 0; i < sensedObjects.size(); i++) {
+					if (objectXCoords.get(i) == x && objectYCoords.get(i) == y) {
+						disappeared = false;
+						break;
+					}
+				}
+				if (disappeared) {
+					clearEntityFromMemory(x, y);
+					System.out.println("Old memory removed");
+				}
+			}
+		}
+
 		//       Agents are currently not added to working memory. Depending on how 
 		//       communication is modelled you might want to do this.
 		//        neighbouringAgents.clear();
@@ -329,5 +348,12 @@ public class TWAgentWorkingMemory {
 
 	public ObjectGrid2D getMemoryGrid() {
 		return this.memoryGrid;
+	}
+
+	// after agent picks up a tile or puts down a tile, should clear the tile/ hole in memory
+	public void clearEntityFromMemory(int x, int y) {
+		objects[x][y] = null;
+		memoryGrid.set(x, y, null);
+		memorySize--;
 	}
 }
