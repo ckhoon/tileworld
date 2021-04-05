@@ -9,15 +9,8 @@ import sim.field.grid.ObjectGrid2D;
 import sim.util.Bag;
 import sim.util.Int2D;
 import sim.util.IntBag;
-import tileworld.environment.NeighbourSpiral;
+import tileworld.environment.*;
 import tileworld.Parameters;
-import tileworld.environment.TWEntity;
-
-
-import tileworld.environment.TWHole;
-import tileworld.environment.TWObject;
-import tileworld.environment.TWObstacle;
-import tileworld.environment.TWTile;
 
 /**
  * TWAgentMemory
@@ -114,6 +107,12 @@ public class TWAgentWorkingMemory {
 		//       this.decayMemory();       // You might want to think about when to call the decay function as well.
 		for (int i = 0; i < sensedObjects.size(); i++) {
 			TWEntity o = (TWEntity) sensedObjects.get(i);
+
+			if (o instanceof TWFuelStation){
+				this.me.setFuelStation(o.getX(), o.getY());
+				continue;
+			}
+
 			if (!(o instanceof TWObject)) {
 				continue;
 			}
@@ -177,7 +176,7 @@ public class TWAgentWorkingMemory {
 
 	/**
 	 * updates memory using 2d array of sensor range - currently not used
-	 * @see TWAgentWorkingMemory#updateMemory(sim.util.Bag, sim.util.IntBag, sim.util.IntBag)
+	 * see TWAgentWorkingMemory#updateMemory(sim.util.Bag, sim.util.IntBag, sim.util.IntBag)
 	 */
 	public void updateMemory(TWEntity[][] sensed, int xOffset, int yOffset) {
 		for (int x = 0; x < sensed.length; x++) {
@@ -266,11 +265,11 @@ public class TWAgentWorkingMemory {
 	 * Also note that it is likely that nearby objects are also the most recently observed
 	 *
 	 *
-	 * @param x coordinate from which to check for objects
-	 * @param y coordinate from which to check for objects
-	 * @param threshold how recently we want to have seen the object
-	 * @param type the class of object we're looking for (Must inherit from TWObject, specifically tile or hole)
-	 * @return
+	 * param x coordinate from which to check for objects
+	 * param y coordinate from which to check for objects
+	 * param threshold how recently we want to have seen the object
+	 * param type the class of object we're looking for (Must inherit from TWObject, specifically tile or hole)
+	 * return
 	 */
 	private TWObject getNearbyObject(int sx, int sy, double threshold, Class<?> type) {
 

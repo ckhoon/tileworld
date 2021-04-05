@@ -17,12 +17,13 @@ public class GYAgent extends TWAgent {
 
     public enum STATE {
 
-        SPLIT_REGION, FIND_FUEL_STATION, PLAN_GREEDY;
+        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY;
     }
 
     private String name;
     private Boolean hasNewMessage;
     private Boolean foundFuel;
+    private Boolean searchX;
     private Message message;
     private STATE state;
     private int targetX, targetY;
@@ -80,6 +81,9 @@ public class GYAgent extends TWAgent {
         switch(state){
             case SPLIT_REGION:
                 thought = planSplitRegion();
+                break;
+            case MOVE_TO_CORNER:
+                thought = planMoveToCorner();
                 break;
             case FIND_FUEL_STATION:
                 thought = planFindFuelStation();
@@ -176,6 +180,10 @@ public class GYAgent extends TWAgent {
                         if (state == STATE.SPLIT_REGION)
                             getRegion();
                         break;
+                    case FOUND_FUEL:
+                        this.fuelStationX = m.getX();
+                        this.fuelStationY = m.getY();
+                        break;
                     default:
                         System.out.println("Not suppose to see this.");
                         break;
@@ -188,6 +196,14 @@ public class GYAgent extends TWAgent {
         this.message.setMessageType(Message.MESSAGE_TYPE.MY_X_Y);
         this.message.setX(this.getX());
         this.message.setY(this.getY());
+        this.message.setMessage("nothing here");
+        hasNewMessage = true;
+    }
+
+    private void sendFuelStationLocation(){
+        this.message.setMessageType(Message.MESSAGE_TYPE.FOUND_FUEL);
+        this.message.setX(fuelStationX);
+        this.message.setY(fuelStationY);
         this.message.setMessage("nothing here");
         hasNewMessage = true;
     }
@@ -205,7 +221,8 @@ public class GYAgent extends TWAgent {
                     (int)Math.floor(getEnvironment().getxDimension()*2/3)};
             this.targetX = xCorner[index] + Parameters.defaultSensorRange;
             this.targetY = Parameters.defaultSensorRange;
-            state = STATE.FIND_FUEL_STATION;
+            searchX = false;
+            state = STATE.MOVE_TO_CORNER;
         }
     }
 
@@ -214,9 +231,36 @@ public class GYAgent extends TWAgent {
         return new TWThought(TWAction.IDLE, TWDirection.Z);
     }
 
-    private TWThought planFindFuelStation(){
+    private TWThought planMoveToCorner(){
         //System.out.println("I am at " + x + " " + y + " I am going to " + targetX + " " + targetY);
-        return new TWThought(TWAction.MOVE, getDirection(x,y,targetX, targetY));
+        if (fuelStationX != -1) {
+            sendFuelStationLocation();
+            state = STATE.PLAN_GREEDY;
+            return new TWThought(TWAction.IDLE, TWDirection.Z);
+        }
+        if (x==targetX && y==targetY){
+            state=STATE.FIND_FUEL_STATION;
+            return new TWThought(TWAction.IDLE, TWDirection.Z);
+        }
+        else
+            return new TWThought(TWAction.MOVE, getDirection(x,y,targetX, targetY));
+    }
+
+    private TWThought planFindFuelStation(){
+        if(!searchX){
+            if (y==Parameters.defaultSensorRange) {
+                this.targetY = getEnvironment().getyDimension() - Parameters.defaultSensorRange;
+            }
+            else{
+                this.targetY = Parameters.defaultSensorRange;
+            }
+            searchX = true;
+        }else{
+            this.targetX += (2*Parameters.defaultSensorRange);
+            searchX = false;
+        }
+        state = STATE.MOVE_TO_CORNER;
+        return new TWThought(TWAction.IDLE, TWDirection.Z);
     }
 
     private TWThought planGreedy(){
