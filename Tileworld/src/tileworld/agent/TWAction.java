@@ -18,5 +18,5 @@ package tileworld.agent;
  */
 public enum TWAction {
 
-    MOVE, PICKUP, PUTDOWN, REFUEL;
+    MOVE, PICKUP, PUTDOWN, REFUEL, IDLE;
 }

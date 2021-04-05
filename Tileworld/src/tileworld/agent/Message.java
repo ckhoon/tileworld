@@ -3,15 +3,14 @@ package tileworld.agent;
 import tileworld.environment.TWObject;
 
 public class Message {
-	public static final int MY_X_Y = 0;
-	public static final int FOUND_FUEL = 1;
-	public static final int MY_SENSE = 2;
-	public static final int ERR_MESSAGE = -1;
+	public enum MESSAGE_TYPE {
+		MY_X_Y, FOUND_FUEL, MY_SENSE, ERR_MESSAGE;
+	}
 
 	private String from; // the sender
 	private String to; // the recepient
 	private String message; // the message
-	private int messageType;
+	private MESSAGE_TYPE messageType;
 	private TWObject object;
 	private int x;
 	private int y;
@@ -20,7 +19,7 @@ public class Message {
 		this.from = from;
 		this.to = to;
 		this.message = message;
-		this.messageType = -1;
+		this.messageType = MESSAGE_TYPE.ERR_MESSAGE;
 	}
 
 	public String getFrom() {
@@ -41,7 +40,7 @@ public class Message {
 
 	public int getY() { return this.y;}
 
-	public int getMessageType() { return this.messageType;}
+	public MESSAGE_TYPE getMessageType() { return this.messageType;}
 
 	public void setMessage(String m) {this.message = m;}
 
@@ -51,6 +50,6 @@ public class Message {
 
 	public void setY(int y) { this.y = y;}
 
-	public void setMessageType(int mt) { this.messageType = mt;}
+	public void setMessageType(MESSAGE_TYPE mt) { this.messageType = mt;}
 
 }
