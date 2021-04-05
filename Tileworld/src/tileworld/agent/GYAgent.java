@@ -13,6 +13,9 @@ import static tileworld.environment.TWDirection.S;
 
 public class GYAgent extends TWAgent {
     private String name;
+    private Boolean hasNewMessage;
+    private Boolean foundFuel;
+    private Message message;
 
     /**
      * Fuel level, automatically decremented once per move.
@@ -34,6 +37,9 @@ public class GYAgent extends TWAgent {
     public GYAgent(String name, int xpos, int ypos, TWEnvironment env, double fuelLevel) {
         super(xpos, ypos, env, fuelLevel);
         this.name = name;
+        this.hasNewMessage = false;
+        this.foundFuel = false;
+        this.message = new Message(this.name,"","");
 //        this.score = 0; done in super function
 //        this.fuelLevel = fuelLevel;
 //        this.carriedTiles = new ArrayList<TWTile>();
@@ -43,13 +49,23 @@ public class GYAgent extends TWAgent {
 
 
     public void communicate() {
-        Message message = new Message("","","");
-        this.getEnvironment().receiveMessage(message); // this will send the message to the broadcast channel of the environment
+        if (hasNewMessage) {
+            //Message message = new Message(this.name,"b",m);
+            this.getEnvironment().receiveMessage(this.message); // this will send the message to the broadcast channel of the environment
+            hasNewMessage = false;
+        }
     }
 
     protected TWDirection generalDir = TWDirection.E;
 
     protected TWThought think() {
+        //ArrayList<Message> message = this.getEnvironment().getMessages();
+        //System.out.println(message.size());
+        //System.out.println(message.get(0).getFrom());
+        checkMessage();
+        if (!foundFuel)
+            sendMyLocation();
+
         if (memory.getMemorySize() == 0) {
             return new TWThought(TWAction.MOVE, generalDir);
         }
@@ -149,5 +165,30 @@ public class GYAgent extends TWAgent {
 
     public String getName() {
         return name;
+    }
+
+    private void checkMessage() {
+        ArrayList<Message> message = this.getEnvironment().getMessages();
+        for (int i=0; i<message.size(); i++){
+            Message m = message.get(i);
+            if (m.getFrom() != this.name){
+                switch(m.getMessageType()){
+                    case Message.MY_X_Y:
+                        System.out.println(m.getFrom() + " is at x-" + m.getX() + " y-" + m.getY());
+                        break;
+                    default:
+                        System.out.println("Not suppose to see this.");
+                        break;
+                }
+            }
+        }
+    }
+
+    private void sendMyLocation(){
+        this.message.setMessageType(Message.MY_X_Y);
+        this.message.setX(this.getX());
+        this.message.setY(this.getY());
+        this.message.setMessage("nothing here");
+        hasNewMessage = true;
     }
 }
