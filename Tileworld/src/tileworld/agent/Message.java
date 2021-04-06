@@ -14,6 +14,7 @@ public class Message {
 	private TWObject object;
 	private int x;
 	private int y;
+	private long timestamp;
 	
 	public Message(String from, String to, String message){
 		this.from = from;
@@ -40,6 +41,8 @@ public class Message {
 
 	public int getY() { return this.y;}
 
+	public long getTimestamp(){return this.timestamp;}
+
 	public MESSAGE_TYPE getMessageType() { return this.messageType;}
 
 	public void setMessage(String m) {this.message = m;}
@@ -49,6 +52,8 @@ public class Message {
 	public void setX(int x) { this.x = x;}
 
 	public void setY(int y) { this.y = y;}
+
+	public void setTimestamp(){this.timestamp = System.nanoTime();}
 
 	public void setMessageType(MESSAGE_TYPE mt) { this.messageType = mt;}
 
