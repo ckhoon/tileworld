@@ -4,7 +4,7 @@ import tileworld.environment.TWObject;
 
 public class Message {
 	public enum MESSAGE_TYPE {
-		MY_X_Y, FOUND_FUEL, MY_SENSE, ERR_MESSAGE;
+		MY_X_Y, FOUND_FUEL, UPDATE_MY_X_Y, MY_SENSE, ERR_MESSAGE;
 	}
 
 	private String from; // the sender

@@ -1,10 +1,7 @@
 package tileworld.agent;
 
 import tileworld.Parameters;
-import tileworld.environment.TWDirection;
-import tileworld.environment.TWEnvironment;
-import tileworld.environment.TWHole;
-import tileworld.environment.TWTile;
+import tileworld.environment.*;
 import tileworld.exceptions.CellBlockedException;
 
 import java.util.ArrayList;
@@ -25,11 +22,13 @@ public class GYAgent extends TWAgent {
     private Boolean foundFuel;
     private Boolean searchX;
     private Boolean prevMoveBlocked;
+    private TWDirection prevDir;
     private Message message;
     private STATE state;
     private int targetX, targetY;
     private String[] otherAgentName;
     private int[] otherAgentLocX = new int[2];
+    private int[] otherAgentLocY = new int[2];
     private long[] otherAgentTimestamp = new long[2];
 
     /**
@@ -114,6 +113,7 @@ public class GYAgent extends TWAgent {
                     if(getEnvironment().isCellBlocked(x+dir.dx, y+dir.dy)) {
                         System.out.println("cell blocked");
                         prevMoveBlocked = true;
+                        prevDir = dir;
                         dir = getAltDirection(dir);
                         generalDir = dir;
                     }else
@@ -188,6 +188,16 @@ public class GYAgent extends TWAgent {
                         this.fuelStationX = m.getX();
                         this.fuelStationY = m.getY();
                         break;
+                    case UPDATE_MY_X_Y:
+                        if (otherAgentName[0].equals(m.getFrom())) {
+                            otherAgentLocX[0] = m.getX();
+                            otherAgentLocY[0] = m.getY();
+                        }
+                        else if (otherAgentName[1].equals(m.getFrom())) {
+                            otherAgentLocX[1] = m.getX();
+                            otherAgentLocY[1] = m.getY();
+                        }
+                        break;
                     default:
                         System.out.println("Not suppose to see this.");
                         break;
@@ -214,6 +224,15 @@ public class GYAgent extends TWAgent {
         hasNewMessage = true;
     }
 
+    private void sendUpdateLocation(){
+        this.message.setMessageType(Message.MESSAGE_TYPE.UPDATE_MY_X_Y);
+        this.message.setX(this.getX());
+        this.message.setY(this.getY());
+        this.message.setTimestamp();
+        this.message.setMessage("nothing here");
+        hasNewMessage = true;
+    }
+
     /**
      *
      * Helper Functions
@@ -223,28 +242,19 @@ public class GYAgent extends TWAgent {
     private TWDirection getDirection(int x, int y, int targetX, int targetY) {
         // System.out.println("Inside get direction: " + x + " " + y + " " + targetX + " " + targetY);
         TWDirection dir;
-        if (!prevMoveBlocked) {
+        if (prevMoveBlocked) {
+            dir = prevDir;
+        }
+        else {
             if (targetX > x) {
                 dir = TWDirection.E;
             } else if (targetX < x) {
                 dir = TWDirection.W;
             } else if (targetY < y) {
                 dir = TWDirection.N;
-            } else if (targetY > y){
+            } else if (targetY > y) {
                 dir = TWDirection.S;
-            } else{
-                dir = TWDirection.Z;
-            }
-        }else{
-            if (targetY < y) {
-                dir = TWDirection.N;
-            } else if (targetY > y){
-                dir = TWDirection.S;
-            }else if (targetX > x) {
-                dir = TWDirection.E;
-            }else if (targetX < x) {
-                dir = TWDirection.W;
-            }else{
+            } else {
                 dir = TWDirection.Z;
             }
         }
@@ -283,6 +293,23 @@ public class GYAgent extends TWAgent {
         }
     }
 
+    private void collectPointsOnMyWay(){
+        if (this.getEnvironment().doesCellContainObject(x, y)) {
+            //System.out.println("something here");
+            TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                    .get(this.getX(), this.getY());
+            if (e instanceof TWTile) {
+                if (this.carriedTiles.size() < 3) {
+                    this.pickUpTile((TWTile) e);
+                    memory.clearEntityFromMemory(x, y);
+                }
+            } else if (e instanceof TWHole) {
+                if (this.hasTile())
+                    this.putTileInHole((TWHole) e);
+            }
+        }
+    }
+
     /**
      *
      * Functions for plans
@@ -301,6 +328,9 @@ public class GYAgent extends TWAgent {
             state = STATE.PLAN_GREEDY;
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
+
+        //collectPointsOnMyWay();
+
         if (x==targetX && y==targetY){
             state=STATE.FIND_FUEL_STATION;
             return new TWThought(TWAction.IDLE, TWDirection.Z);
