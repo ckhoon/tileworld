@@ -110,7 +110,9 @@ public class GYAgent extends TWAgent {
             else{
                 AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
                 //find path
-                TWPath path =a.findPath(this.getX(), this.getY(), fuelStationX, fuelStationY);
+                System.out.println(fuelStationX);
+                System.out.println(fuelStationY);
+                TWPath path =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
                 TWDirection nextdir=path.getStep(0).getDirection();
                 thought=new TWThought(TWAction.MOVE,nextdir);
 
@@ -141,6 +143,7 @@ public class GYAgent extends TWAgent {
                         prevMoveBlocked = false;
                     move(dir);
                 } catch (CellBlockedException ex) {
+
                     switch (generalDir){
                         case E:
                             generalDir = TWDirection.S;
@@ -326,6 +329,7 @@ public class GYAgent extends TWAgent {
         //System.out.println("I am at " + x + " " + y + " I am going to " + targetX + " " + targetY);
         if (fuelStationX != -1) {
             sendFuelStationLocation();
+            System.out.println("FFFFFFFFFFFFFFFFFFFF");
             state = STATE.PLAN_GREEDY;
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
@@ -362,25 +366,25 @@ public class GYAgent extends TWAgent {
         //generalDir is change to the dir which maximize the manhattan distance with the other 2 agents(perfer leave away from each other)
 
 //In test
-//        double d_up=sumdistance(x,y-1,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double d_down=sumdistance(x,y+1,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double d_left=sumdistance(x-1,y,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double d_right=sumdistance(x+1,y,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double mdis=Math.max(Math.max(d_up,d_down),Math.max(d_left,d_right));
-//        if (mdis==d_up){
-//            generalDir=TWDirection.N;
-//        }else if (mdis==d_down){
-//            generalDir=TWDirection.S;
-//        }else if (mdis==d_left){
-//            generalDir=TWDirection.W;
-//        }else{
-//            generalDir=TWDirection.E;
-//        }
-//        System.out.println("TEST");
-//        System.out.println(x+" "+y);
-//        System.out.println(otherAgentLocX[0]+" "+otherAgentLocY[0]);
-//        System.out.println(otherAgentLocX[1]+" "+otherAgentLocY[1]);
-//        System.out.println(generalDir);
+        double d_up=sumdistance(x,y-1,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
+        double d_down=sumdistance(x,y+1,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
+        double d_left=sumdistance(x-1,y,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
+        double d_right=sumdistance(x+1,y,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
+        double mdis=Math.max(Math.max(d_up,d_down),Math.max(d_left,d_right));
+        if (mdis==d_up){
+            generalDir=TWDirection.N;
+        }else if (mdis==d_down){
+            generalDir=TWDirection.S;
+        }else if (mdis==d_left){
+            generalDir=TWDirection.W;
+        }else{
+            generalDir=TWDirection.E;
+        }
+        System.out.println("TEST");
+        System.out.println(x+" "+y);
+        System.out.println(otherAgentLocX[0]+" "+otherAgentLocY[0]);
+        System.out.println(otherAgentLocX[1]+" "+otherAgentLocY[1]);
+        System.out.println(generalDir);
 
 
 
