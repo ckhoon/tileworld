@@ -11,7 +11,7 @@ import sim.engine.Steppable;
 import sim.field.grid.ObjectGrid2D;
 import sim.util.Bag;
 import sim.util.Int2D;
-import sun.font.TrueTypeFont;
+//import sun.font.TrueTypeFont;
 import tileworld.Parameters;
 import tileworld.TWGUI;
 import tileworld.agent.GYAgent;
