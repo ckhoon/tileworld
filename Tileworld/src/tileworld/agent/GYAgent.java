@@ -81,8 +81,14 @@ public class GYAgent extends TWAgent {
     protected TWDirection generalDir = TWDirection.E;
 
     protected TWThought think() {
+        System.out.println("FUELSTATION:::::::::::::::::::::");
+        System.out.println(fuelStationX);
+        System.out.println(fuelStationY);
         TWThought thought;
         checkMessage();
+        System.out.println("I'm' "+this.name+" my position is "+this.x+","+this.y);
+        System.out.println("____________________________________________________________________________________________");
+        sendMyLocation();
 
         switch(state){
             case SPLIT_REGION:
@@ -110,14 +116,14 @@ public class GYAgent extends TWAgent {
             else{
                 AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
                 //find path
-                System.out.println(fuelStationX);
-                System.out.println(fuelStationY);
+
                 TWPath path =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
                 TWDirection nextdir=path.getStep(0).getDirection();
                 thought=new TWThought(TWAction.MOVE,nextdir);
 
             }
         }
+
 
 
 
@@ -175,9 +181,7 @@ public class GYAgent extends TWAgent {
             case IDLE:
                 break;
         }
-        System.out.println("I'm' "+this.name+" my position after move is (I think send message after move, could change) "+this.x+","+this.y);
-        System.out.println("____________________________________________________________________________________________");
-        sendMyLocation();
+
 
 
     }
