@@ -113,7 +113,7 @@ public class GYAgent extends TWAgent {
        // if (this.fuelLevel>=100 && this.fuelLevel<=200)
            // state=STATE.PLAN_TO_REFUEL
             //thought=new TWThought(LAN_TO_REFUEL)
-      //  if (this.fuelLevel<=200
+      //   if (this.fuelLevel<=200
 
         if (this.fuelLevel<=400){
             if (this.x==fuelStationX &&this.y==fuelStationY)
