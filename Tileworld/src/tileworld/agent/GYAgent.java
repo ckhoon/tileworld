@@ -16,7 +16,7 @@ public class GYAgent extends TWAgent {
 
     public enum STATE {
 
-        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY;
+        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY,PLAN_TO_REFUEL;
     }
 
     private String name;
@@ -108,7 +108,14 @@ public class GYAgent extends TWAgent {
 
 
         //to refuel, find the path to fuel station, then follow the direction
-        if (this.fuelLevel<=4000){
+        //if (this.fuelLevel200 100)
+        //highest level: lowest fuellvel
+        if (this.fuelLevel>=100 && this.fuelLevel<=200)
+            state=STATE.PLAN_TO_REFUEL
+            //thought=new TWThought(LAN_TO_REFUEL)
+        if (this.fuelLevel<=200
+
+        if (this.fuelLevel<=400){
             if (this.x==fuelStationX &&this.y==fuelStationY)
                 thought=new TWThought(TWAction.REFUEL,TWDirection.Z);
             else{
@@ -396,6 +403,10 @@ public class GYAgent extends TWAgent {
     }
     private TWThought planGreedy(){
 
+        //two agents are close
+
+
+        //depend
         //generalDir is change to the dir which maximize the manhattan distance with the other 2 agents(perfer leave away from each other)
 
 //In test
