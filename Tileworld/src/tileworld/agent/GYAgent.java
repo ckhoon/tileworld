@@ -360,6 +360,7 @@ public class GYAgent extends TWAgent {
             TWPath path_to_temp=a.findPath(this.x, this.y, temptargetX,temptargetY);
             TWPath temp_to_station=a.findPath(this.x, this.y, temptargetX,temptargetY);
 
+
             //if path_to_temp+temp_to_station is much larger than path_to_station,refused to do so.---halfway idea
 
             TWDirection nextdir=path_to_station.getStep(0).getDirection();
