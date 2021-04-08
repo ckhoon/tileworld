@@ -16,7 +16,7 @@ public class GYAgent extends TWAgent {
 
     public enum STATE {
 
-        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY,PLAN_TO_REFUEL;
+        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY,PLAN_TO_REFUEL,FULL_FUEL,LOW_FUEL;
     }
 
     private String name;
@@ -28,6 +28,7 @@ public class GYAgent extends TWAgent {
     private Message message;
     private STATE state;
     private int targetX, targetY;
+    private int temptargetX,temptargetY;
     private String[] otherAgentName;
     private int[] otherAgentLocX = new int[2];
     private int[] otherAgentLocY = new int[2];
@@ -67,6 +68,17 @@ public class GYAgent extends TWAgent {
 //        this.memory = new TWAgentWorkingMemory(this, env.schedule, env.getxDimension(), env.getyDimension());
     }
 
+    public STATE checkFuel(){
+        if (this.fuelLevel>=250)
+            //0 means the fuel level is enough
+            return STATE.FULL_FUEL;
+        else if (this.fuelLevel>=100)
+            return STATE.PLAN_TO_REFUEL;
+        else return STATE.LOW_FUEL;
+
+
+    }
+
 
     public void communicate() {
         if (hasNewMessage) {
@@ -101,6 +113,9 @@ public class GYAgent extends TWAgent {
             case PLAN_GREEDY:
                 thought = planGreedy();
                 break;
+            case LOW_FUEL:
+                thought= gostationnow();
+                break;
             default:
                 thought = new TWThought(TWAction.IDLE, TWDirection.Z);
                 break;
@@ -115,19 +130,7 @@ public class GYAgent extends TWAgent {
             //thought=new TWThought(LAN_TO_REFUEL)
       //    if (this.fuelLevel<=200
 
-        if (this.fuelLevel<=400){
-            if (this.x==fuelStationX &&this.y==fuelStationY)
-                thought=new TWThought(TWAction.REFUEL,TWDirection.Z);
-            else{
-                AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
-                //find path
 
-                TWPath path =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
-                TWDirection nextdir=path.getStep(0).getDirection();
-                thought=new TWThought(TWAction.MOVE,nextdir);
-
-            }
-        }
 
 
 
@@ -280,6 +283,8 @@ public class GYAgent extends TWAgent {
      *
      */
 
+
+    //replace this with astarpathgenerator? The first step is the direction? I use this in path to fuelstation --By zizhao
     private TWDirection getDir(int x, int y, int targetX, int targetY) {
         // System.out.println("Inside get direction: " + x + " " + y + " " + targetX + " " + targetY);
         TWDirection dir;
@@ -332,6 +337,37 @@ public class GYAgent extends TWAgent {
             searchX = false;
             state = STATE.MOVE_TO_CORNER;
         }
+    }
+
+    private TWThought gostationnow(){
+        //maybe the value is set to size*2 is better?
+
+        if (this.x==fuelStationX &&this.y==fuelStationY)
+
+            return new TWThought(TWAction.REFUEL,TWDirection.Z);
+        else{
+            AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
+            //find path
+
+            //the idea is during the way to fuelstation, if new hole or tile is close to agent, then
+            //check the hole/tile location,
+            // set to temptargetX,temptargetY
+            // compare the distance
+            TWHole hole = memory.getNearbyHole(x,y,10);
+            TWTile tile = memory.getNearbyTile(x,y,10);
+            temptargetX=hole.getX();temptargetY=hole.getY();
+            TWPath path_to_station =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
+            TWPath path_to_temp=a.findPath(this.x, this.y, temptargetX,temptargetY);
+            TWPath temp_to_station=a.findPath(this.x, this.y, temptargetX,temptargetY);
+
+            //if path_to_temp+temp_to_station is much larger than path_to_station,refused to do so.---halfway idea
+
+            TWDirection nextdir=path_to_station.getStep(0).getDirection();
+            return new TWThought(TWAction.MOVE,nextdir);
+
+        }
+
+        //return null;
     }
 
     private void collectPointsOnMyWay(){
