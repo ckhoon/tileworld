@@ -10,13 +10,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static tileworld.environment.TWDirection.N;
 import static tileworld.environment.TWDirection.S;
 
 public class GYAgent extends TWAgent {
 
     public enum STATE {
 
-        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY,PLAN_TO_REFUEL,FULL_FUEL,LOW_FUEL;
+        SPLIT_REGION, MOVE_TO_CORNER, FIND_FUEL_STATION, PLAN_GREEDY, PLAN_TO_REFUEL, FULL_FUEL, LOW_FUEL;
     }
 
     private String name;
@@ -33,6 +34,8 @@ public class GYAgent extends TWAgent {
     private int[] otherAgentLocX = new int[2];
     private int[] otherAgentLocY = new int[2];
     private long[] otherAgentTimestamp = new long[2];
+    private AstarPathGenerator astarPath;
+
 
     /**
      * Fuel level, automatically decremented once per move.
@@ -63,6 +66,8 @@ public class GYAgent extends TWAgent {
         this.otherAgentName = new String[2];
 //        this.score = 0; done in super function
         this.fuelLevel = fuelLevel;
+
+        this.astarPath = new AstarPathGenerator(this.getEnvironment(), this, 999);
 //        this.carriedTiles = new ArrayList<TWTile>();
 //        this.sensor = new TWAgentSensor(this, Parameters.defaultSensorRange);
 //        this.memory = new TWAgentWorkingMemory(this, env.schedule, env.getxDimension(), env.getyDimension());
@@ -167,7 +172,7 @@ public class GYAgent extends TWAgent {
                             generalDir = TWDirection.W;
                             break;
                         case W:
-                            generalDir = TWDirection.N;
+                            generalDir = N;
                             break;
                         case N:
                             generalDir = TWDirection.E;
@@ -278,7 +283,7 @@ public class GYAgent extends TWAgent {
             } else if (targetX < x) {
                 dir = TWDirection.W;
             } else if (targetY < y) {
-                dir = TWDirection.N;
+                dir = N;
             } else if (targetY > y) {
                 dir = TWDirection.S;
             } else {
@@ -350,6 +355,66 @@ public class GYAgent extends TWAgent {
         }
     }
 
+    private TWDirection collectNearByOnMyWay(TWDirection nextDir){
+        if (nextDir == TWDirection.S | nextDir == TWDirection.N){
+            if (x > 0 && x < getEnvironment().getxDimension()-1) {
+                if (this.getEnvironment().doesCellContainObject(x - 1, y)) {
+                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                            .get(this.getX()-1, this.getY());
+                    if (e instanceof TWTile) {
+                        if (this.carriedTiles.size() < 3) {
+                            return TWDirection.W;
+                        }
+                    } else if (e instanceof TWHole) {
+                        if (this.hasTile())
+                            return TWDirection.W;
+                    }
+                } else if (this.getEnvironment().doesCellContainObject(x + 1, y)) {
+                    //System.out.println("something here");
+                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                            .get(this.getX()+1, this.getY());
+                    if (e instanceof TWTile) {
+                        if (this.carriedTiles.size() < 3) {
+                            return TWDirection.E;
+                        }
+                    } else if (e instanceof TWHole) {
+                        if (this.hasTile())
+                            return TWDirection.E;
+                    }
+                }
+            }
+        }else if (nextDir == TWDirection.E | nextDir == TWDirection.W){
+            //System.out.println(name + " " + nextDir);
+            if (y > 0 && y < getEnvironment().getyDimension()-1) {
+                if (this.getEnvironment().doesCellContainObject(x, y-1)) {
+                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                            .get(this.getX(), this.getY()-1);
+                    if (e instanceof TWTile) {
+                        if (this.carriedTiles.size() < 3) {
+                            return TWDirection.N;
+                        }
+                    } else if (e instanceof TWHole) {
+                        if (this.hasTile())
+                            return TWDirection.N;
+                    }
+                } else if (this.getEnvironment().doesCellContainObject(x, y+1)) {
+                    //System.out.println("something here");
+                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                            .get(this.getX(), this.getY()+1);
+                    if (e instanceof TWTile) {
+                        if (this.carriedTiles.size() < 3) {
+                            return TWDirection.S;
+                        }
+                    } else if (e instanceof TWHole) {
+                        if (this.hasTile())
+                            return TWDirection.S;
+                    }
+                }
+            }
+        }
+        return nextDir;
+    }
+
     /**
      *
      * Functions for plans
@@ -362,7 +427,7 @@ public class GYAgent extends TWAgent {
     }
 
     private TWThought planMoveToCorner(){
-        //System.out.println("I am at " + x + " " + y + " I am going to " + targetX + " " + targetY);
+
         if (fuelStationX != -1) {
             sendFuelStationLocation();
             //System.out.println("FFFFFFFFFFFFFFFFFFFF");
@@ -376,8 +441,22 @@ public class GYAgent extends TWAgent {
             state=STATE.FIND_FUEL_STATION;
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
-        else
-            return new TWThought(TWAction.MOVE, getDir(x,y,targetX, targetY));
+        else{
+            TWPath pathToTarget =astarPath.findPath(this.x, this.y, targetX, targetY);
+            TWDirection nextdir;
+            try {
+                nextdir = pathToTarget.getStep(0).getDirection();
+            }
+            catch(Exception e)
+            {
+                nextdir = TWDirection.Z;
+            }
+
+            nextdir = collectNearByOnMyWay(nextdir);
+
+            return new TWThought(TWAction.MOVE, nextdir);
+        }
+        //return new TWThought(TWAction.MOVE, getDir(x,y,targetX, targetY));
     }
 
     private TWThought planFindFuelStation(){
