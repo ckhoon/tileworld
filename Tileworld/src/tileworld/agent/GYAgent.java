@@ -91,13 +91,13 @@ public class GYAgent extends TWAgent {
     protected TWDirection generalDir = TWDirection.E;
 
     protected TWThought think() {
-        System.out.println("FUELSTATION:::::::::::::::::::::");
-        System.out.println(fuelStationX);
-        System.out.println(fuelStationY);
+        //System.out.println("FUELSTATION:::::::::::::::::::::");
+        //System.out.println(fuelStationX);
+        //System.out.println(fuelStationY);
         TWThought thought;
         checkMessage();
-        System.out.println("I'm' "+this.name+" my position is "+this.x+","+this.y);
-        System.out.println("____________________________________________________________________________________________");
+        //System.out.println("I'm' "+this.name+" my position is "+this.x+","+this.y);
+        //System.out.println("____________________________________________________________________________________________");
         sendMyLocation();
 
         switch(state){
@@ -114,7 +114,7 @@ public class GYAgent extends TWAgent {
                 thought = planGreedy();
                 break;
             case LOW_FUEL:
-                thought= gostationnow();
+                thought= planGostationnow();
                 break;
             default:
                 thought = new TWThought(TWAction.IDLE, TWDirection.Z);
@@ -149,7 +149,7 @@ public class GYAgent extends TWAgent {
                 try {
                     TWDirection dir = thought.getDirection();
                     if(getEnvironment().isCellBlocked(x+dir.dx, y+dir.dy)) {
-                        System.out.println("cell blocked");
+                        //System.out.println("cell blocked");
                         prevMoveBlocked = true;
                         prevDir = dir;
                         dir = getAltDirection(dir);
@@ -212,7 +212,7 @@ public class GYAgent extends TWAgent {
             if (m.getFrom() != this.name){
                 switch(m.getMessageType()){
                     case MY_X_Y:
-                        System.out.println(m.getFrom() + " is at x-" + m.getX() + " y-" + m.getY() + " @" + m.getTimestamp());
+                        //System.out.println(m.getFrom() + " is at x-" + m.getX() + " y-" + m.getY() + " @" + m.getTimestamp());
                         if (otherAgentName[0] == null | otherAgentName[0]==m.getFrom()) {
                             otherAgentName[0] = m.getFrom();
                             otherAgentLocX[0] = m.getX();
@@ -231,16 +231,6 @@ public class GYAgent extends TWAgent {
                     case FOUND_FUEL:
                         this.fuelStationX = m.getX();
                         this.fuelStationY = m.getY();
-                        break;
-                    case UPDATE_MY_X_Y:
-                        if (otherAgentName[0].equals(m.getFrom())) {
-                            otherAgentLocX[0] = m.getX();
-                            otherAgentLocY[0] = m.getY();
-                        }
-                        else if (otherAgentName[1].equals(m.getFrom())) {
-                            otherAgentLocX[1] = m.getX();
-                            otherAgentLocY[1] = m.getY();
-                        }
                         break;
                     default:
                         System.out.println("Not suppose to see this.");
@@ -263,15 +253,6 @@ public class GYAgent extends TWAgent {
         this.message.setMessageType(Message.MESSAGE_TYPE.FOUND_FUEL);
         this.message.setX(fuelStationX);
         this.message.setY(fuelStationY);
-        this.message.setTimestamp();
-        this.message.setMessage("nothing here");
-        hasNewMessage = true;
-    }
-
-    private void sendUpdateLocation(){
-        this.message.setMessageType(Message.MESSAGE_TYPE.UPDATE_MY_X_Y);
-        this.message.setX(this.getX());
-        this.message.setY(this.getY());
         this.message.setTimestamp();
         this.message.setMessage("nothing here");
         hasNewMessage = true;
@@ -339,36 +320,17 @@ public class GYAgent extends TWAgent {
         }
     }
 
-    private TWThought gostationnow(){
-        //maybe the value is set to size*2 is better?
-
-        if (this.x==fuelStationX &&this.y==fuelStationY)
-
-            return new TWThought(TWAction.REFUEL,TWDirection.Z);
-        else{
-            AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
-            //find path
-
-            //the idea is during the way to fuelstation, if new hole or tile is close to agent, then
-            //check the hole/tile location,
-            // set to temptargetX,temptargetY
-            // compare the distance
-            TWHole hole = memory.getNearbyHole(x,y,10);
-            TWTile tile = memory.getNearbyTile(x,y,10);
-            temptargetX=hole.getX();temptargetY=hole.getY();
-            TWPath path_to_station =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
-            TWPath path_to_temp=a.findPath(this.x, this.y, temptargetX,temptargetY);
-            TWPath temp_to_station=a.findPath(this.x, this.y, temptargetX,temptargetY);
 
 
-            //if path_to_temp+temp_to_station is much larger than path_to_station,refused to do so.---halfway idea
-
-            TWDirection nextdir=path_to_station.getStep(0).getDirection();
-            return new TWThought(TWAction.MOVE,nextdir);
-
+    private boolean checkFuelLevel()
+    {
+        if (this.fuelLevel<=200) {
+            state = STATE.LOW_FUEL;
+            return true;
         }
+        else
+            return false;
 
-        //return null;
     }
 
     private void collectPointsOnMyWay(){
@@ -403,12 +365,12 @@ public class GYAgent extends TWAgent {
         //System.out.println("I am at " + x + " " + y + " I am going to " + targetX + " " + targetY);
         if (fuelStationX != -1) {
             sendFuelStationLocation();
-            System.out.println("FFFFFFFFFFFFFFFFFFFF");
+            //System.out.println("FFFFFFFFFFFFFFFFFFFF");
             state = STATE.PLAN_GREEDY;
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
 
-        //collectPointsOnMyWay();
+        collectPointsOnMyWay();
 
         if (x==targetX && y==targetY){
             state=STATE.FIND_FUEL_STATION;
@@ -435,9 +397,43 @@ public class GYAgent extends TWAgent {
         return new TWThought(TWAction.IDLE, TWDirection.Z);
     }
 
+    private TWThought planGostationnow(){
+        //maybe the value is set to size*2 is better?
+
+        if (this.x==fuelStationX &&this.y==fuelStationY) {
+            state = STATE.PLAN_GREEDY;
+            return new TWThought(TWAction.REFUEL, TWDirection.Z);
+        }
+        else{
+            AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
+            //find path
+
+            //the idea is during the way to fuelstation, if new hole or tile is close to agent, then
+            //check the hole/tile location,
+            // set to temptargetX,temptargetY
+            // compare the distance
+            TWHole hole = memory.getNearbyHole(x,y,10);
+            TWTile tile = memory.getNearbyTile(x,y,10);
+            //temptargetX=hole.getX();
+            //temptargetY=hole.getY();
+            TWPath path_to_station =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
+            //TWPath path_to_temp=a.findPath(this.x, this.y, temptargetX,temptargetY);
+            //TWPath temp_to_station=a.findPath(this.x, this.y, temptargetX,temptargetY);
+
+
+            //if path_to_temp+temp_to_station is much larger than path_to_station,refused to do so.---halfway idea
+
+            TWDirection nextdir=path_to_station.getStep(0).getDirection();
+            return new TWThought(TWAction.MOVE,nextdir);
+        }
+
+        //return null;
+    }
+
     private double sumdistance(double xx,double yy,double x0,double y0,double x1,double y1){
         return Math.sqrt(Math.pow(xx-x0,2)+Math.pow(yy-y0,2))+Math.sqrt(Math.pow(xx-x1,2)+Math.pow(yy-y1,2));
     }
+
     private TWThought planGreedy(){
 
         //two agents are close
@@ -467,7 +463,8 @@ public class GYAgent extends TWAgent {
 //        System.out.println(otherAgentLocX[1]+" "+otherAgentLocY[1]);
 //        System.out.println(generalDir);
 
-
+        if(checkFuelLevel())
+            state = STATE.LOW_FUEL;
 
         if (memory.getMemorySize() == 0) {
             return new TWThought(TWAction.MOVE, generalDir);
@@ -486,28 +483,28 @@ public class GYAgent extends TWAgent {
         if (carriedTiles.size() != 0 && carriedTiles.size() < 3) {
             // go to holes first, if null, then go to tile
             if (hole != null) {
-                System.out.println("go to hole");
+                //System.out.println("go to hole");
                 return new TWThought(TWAction.MOVE, getDir(x,y,hole.getX(), hole.getY()));
             } else if (tile != null) {
-                System.out.println("go to tile");
+                //System.out.println("go to tile");
                 return new TWThought(TWAction.MOVE, getDir(x,y,tile.getX(), tile.getY()));
             }
         } else if (carriedTiles.size() == 0) {
             // only go to tiles, ignore holes, if null then go general dir
             if (tile != null) {
-                System.out.println("go to tile");
+                //System.out.println("go to tile");
                 return new TWThought(TWAction.MOVE, getDir(x,y,tile.getX(), tile.getY()));
             }
         } else if (carriedTiles.size() == 3) {
             // only go to holes, ignore tiles, if null then go general dir
             if (hole != null) {
-                System.out.println("go to hole");
+                //System.out.println("go to hole");
                 return new TWThought(TWAction.MOVE, getDir(x,y,hole.getX(), hole.getY()));
             }
         }
 
-        System.out.println("Default case, Simple Score: " + this.score);
-        System.out.println("FUEL level:"+this.fuelLevel);
+        //System.out.println("Default case, Simple Score: " + this.score);
+        //System.out.println("FUEL level:"+this.fuelLevel);
         // default case, go general direction
         return new TWThought(TWAction.MOVE, generalDir);
     }
