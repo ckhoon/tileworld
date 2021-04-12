@@ -318,13 +318,19 @@ public class GYAgent extends TWAgent {
                 if(this.message.getTimestamp() > otherAgentTimestamp[1])
                     index += 1;
             }
-            System.out.println(index);
             int[] xCorner = new int[]{0,
                     (int)Math.floor(getEnvironment().getxDimension()/3),
                     (int)Math.floor(getEnvironment().getxDimension()*2/3)};
             this.targetX = xCorner[index] + Parameters.defaultSensorRange-1;
-            this.targetY = Parameters.defaultSensorRange-1;
-            searchX = false;
+            if(y<getEnvironment().getyDimension()/2) {
+                this.targetY = Parameters.defaultSensorRange - 1;
+                searchX = false;
+            }
+            else{
+                this.targetY = getEnvironment().getyDimension() - Parameters.defaultSensorRange;
+                searchX = false;
+            }
+
             state = STATE.MOVE_TO_CORNER;
         }
     }
