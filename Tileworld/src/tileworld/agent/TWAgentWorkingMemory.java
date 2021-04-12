@@ -38,7 +38,7 @@ public class TWAgentWorkingMemory {
 	 */
 	private Schedule schedule;
 	private TWAgent me;
-	private final static int MAX_TIME = 10;
+	private final static int MAX_TIME = 50;
 	private final static float MEM_DECAY = 0.5f;
 
 	private ObjectGrid2D memoryGrid;
@@ -147,10 +147,10 @@ public class TWAgentWorkingMemory {
 				}
 				if (disappeared) {
 					clearEntityFromMemory(x, y);
-					System.out.println("Old memory removed");
 				}
 			}
 		}
+		decayMemory();
 
 		//       Agents are currently not added to working memory. Depending on how 
 		//       communication is modelled you might want to do this.
@@ -195,18 +195,19 @@ public class TWAgentWorkingMemory {
 	 * remove probabilistically (exponential decay of memory)
 	 */
 	public void decayMemory() {
-		// put some decay on other memory pieces (this will require complete
-		// iteration over memory though, so expensive.
-		//This is a simple example of how to do this.
-		//        for (int x = 0; x < this.objects.length; x++) {
-		//       for (int y = 0; y < this.objects[x].length; y++) {
-		//           TWAgentPercept currentMemory =  objects[x][y];
-		//           if(currentMemory!=null && currentMemory.getT() < schedule.getTime()-MAX_TIME){
-		//               memoryGrid.set(x, y, null);
-		//               memorySize--;
-		//           }
-		//       }
-		//   }
+//		 put some decay on other memory pieces (this will require complete
+//		 iteration over memory though, so expensive.
+//		This is a simple example of how to do this.
+		for (int x = 0; x < this.objects.length; x++) {
+			for (int y = 0; y < this.objects[x].length; y++) {
+			TWAgentPercept currentMemory =  objects[x][y];
+			if(currentMemory!=null && currentMemory.getT() < schedule.getTime()-MAX_TIME){
+				memoryGrid.set(x, y, null);
+				objects[x][y] = null;
+				memorySize--;
+			   }
+		   }
+	   }
 	}
 
 
