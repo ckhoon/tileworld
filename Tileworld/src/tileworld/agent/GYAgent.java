@@ -6,6 +6,7 @@ import tileworld.exceptions.CellBlockedException;
 import tileworld.planners.AstarPathGenerator;
 import tileworld.planners.TWPath;
 
+import javax.swing.plaf.nimbus.State;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class GYAgent extends TWAgent {
 
     private String name;
     private Boolean hasNewMessage;
-    private Boolean foundFuel;
+    // private Boolean foundFuel; use fuelStationX != -1
     private Boolean searchX;
     private Boolean prevMoveBlocked;
     private TWDirection prevDir;
@@ -34,6 +35,10 @@ public class GYAgent extends TWAgent {
     private int[] otherAgentLocX = new int[2];
     private int[] otherAgentLocY = new int[2];
     private long[] otherAgentTimestamp = new long[2];
+    private int distanceToFuelStation = -1;
+    AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
+    private TWDirection[] generalDir = new TWDirection[4];
+    private int generalDirIndex = 0; //representing the index of generalDir
     private AstarPathGenerator astarPath;
 
 
@@ -58,7 +63,7 @@ public class GYAgent extends TWAgent {
         super(xpos, ypos, env, fuelLevel);
         this.name = name;
         this.hasNewMessage = false;
-        this.foundFuel = false;
+        // this.foundFuel = false;
         this.prevMoveBlocked = false;
         this.message = new Message(this.name,"","");
         this.state = STATE.SPLIT_REGION;
@@ -93,8 +98,6 @@ public class GYAgent extends TWAgent {
         }
     }
 
-    protected TWDirection generalDir = TWDirection.E;
-
     protected TWThought think() {
         //System.out.println("FUELSTATION:::::::::::::::::::::");
         //System.out.println(fuelStationX);
@@ -104,6 +107,9 @@ public class GYAgent extends TWAgent {
         //System.out.println("I'm' "+this.name+" my position is "+this.x+","+this.y);
         //System.out.println("____________________________________________________________________________________________");
         sendMyLocation();
+
+        if (fuelStationX != -1) distanceToFuelStation = (int)a.getMovementCost(x,y,fuelStationX,fuelStationY);
+        checkLowFuelLevel(); // if fuel level < 50 or fuel level < 2 * distance, change to low_fuel mode
 
         switch(state){
             case SPLIT_REGION:
@@ -118,7 +124,7 @@ public class GYAgent extends TWAgent {
             case PLAN_GREEDY:
                 thought = planGreedy();
                 break;
-            case LOW_FUEL:
+            case LOW_FUEL: // case 1: fuel level < distance * 2; case 2: fuel level < 50
                 thought= planGostationnow();
                 break;
             default:
@@ -135,12 +141,6 @@ public class GYAgent extends TWAgent {
             //thought=new TWThought(LAN_TO_REFUEL)
       //    if (this.fuelLevel<=200
 
-
-
-
-
-
-
         return thought ;
     }
 
@@ -154,30 +154,22 @@ public class GYAgent extends TWAgent {
                 try {
                     TWDirection dir = thought.getDirection();
                     if(getEnvironment().isCellBlocked(x+dir.dx, y+dir.dy)) {
-                        //System.out.println("cell blocked");
-                        prevMoveBlocked = true;
-                        prevDir = dir;
-                        dir = getAltDirection(dir);
-                        generalDir = dir;
-                    }else
+                        System.out.println("Blocked, finding the next possible direction");
+                        if (state == STATE.PLAN_GREEDY) {
+                            if (generalDirIndex < 3) generalDirIndex++;
+                            dir = generalDir[generalDirIndex];
+                        } else {
+                            //System.out.println("cell blocked");
+                            prevMoveBlocked = true;
+                            prevDir = dir;
+                            dir = getAltDirection(dir); // randomly pick one direction from two
+                            // generalDir = dir;
+                        }
+                    } else
                         prevMoveBlocked = false;
                     move(dir);
                 } catch (CellBlockedException ex) {
-
-                    switch (generalDir){
-                        case E:
-                            generalDir = TWDirection.S;
-                            break;
-                        case S:
-                            generalDir = TWDirection.W;
-                            break;
-                        case W:
-                            generalDir = N;
-                            break;
-                        case N:
-                            generalDir = TWDirection.E;
-                            break;
-                    }
+                    System.out.println("Blocked"); //should not happen because checked before unless surrounded by 4 obstacles;
                 }
                 break;
             case PICKUP:
@@ -327,15 +319,12 @@ public class GYAgent extends TWAgent {
 
 
 
-    private boolean checkFuelLevel()
-    {
-        if (this.fuelLevel<=200) {
+    private boolean checkLowFuelLevel() {
+        if ((distanceToFuelStation != -1 && fuelLevel <= 2 * distanceToFuelStation) || (this.fuelLevel<=50)) {
             state = STATE.LOW_FUEL;
             return true;
         }
-        else
-            return false;
-
+        return false;
     }
 
     private void collectPointsOnMyWay(){
@@ -415,6 +404,97 @@ public class GYAgent extends TWAgent {
         return nextDir;
     }
 
+    private void computeGeneralDirRanking() {
+        generalDirIndex = 0; //reset index
+        HashMap<TWDirection, Integer> scores = new HashMap<>();
+        scores.put(TWDirection.N, 0);
+        scores.put(TWDirection.S, 0);
+        scores.put(TWDirection.W, 0);
+        scores.put(TWDirection.E, 0);
+
+        // scores from distance to fuel station
+        TWDirection[] ranking = new TWDirection[4];
+        if (fuelLevel <= 500 && fuelLevel >= 400) { // away from fuel station
+            ranking = rankDirections();
+            addScores(scores, ranking, 3, 1, -1, -3);
+        } else if (fuelLevel >= 300 && fuelLevel <= 400) {
+            ranking = rankDirections();
+            addScores(scores, ranking, 1, 0, 0, -1);
+        } else if (fuelLevel >= 200 && fuelLevel <= 300) {
+            ranking = rankDirections();
+            addScores(scores, ranking, 0, 0, 0, 0);
+        } else if (fuelLevel >= 100 && fuelLevel <= 200) {
+            ranking = rankDirections();
+            addScores(scores, ranking, -1, 0, 0, 1);
+        } else if (fuelLevel <= 100) {
+            ranking = rankDirections();
+            addScores(scores, ranking, -3, -1, 1, 3);
+        }
+
+        // scores from distance between each other
+        // to be implemented: add scores to the hashmap
+
+        // get the final ranking based on scores
+        ArrayList<TWDirection> finalRanking = new ArrayList<>();
+        scores.entrySet().stream()
+                .sorted((k1, k2) -> (k2.getValue() - k1.getValue()))
+                .forEach(k -> finalRanking.add(k.getKey()));
+        for (int i = 0; i < 4; i++) {
+            generalDir[i] = finalRanking.get(i);
+        }
+        if (name == "agent1") System.out.println("\nnew turn fuel level = " + fuelLevel + " x = " + x + " y = " + y + " N " + scores.get(TWDirection.N) + " S " + scores.get(TWDirection.S) + " W " + scores.get(TWDirection.W)+ " E " + scores.get(TWDirection.E));
+        // if (this.name == "agent1") System.out.println("" + generalDir[0] + " " + generalDir[1] + " " + generalDir[2] + " " + generalDir[3]);
+    }
+
+    private void addScores(HashMap<TWDirection, Integer> scores, TWDirection[] ranking, int score1, int score2, int score3, int score4) {
+        scores.put(ranking[0], scores.get(ranking[0]) + score1);
+        scores.put(ranking[1], scores.get(ranking[1]) + score2);
+        scores.put(ranking[2], scores.get(ranking[2]) + score3);
+        scores.put(ranking[3], scores.get(ranking[3]) + score4);
+
+    }
+
+    private TWDirection[] rankDirections() {
+        TWDirection[] ranking = null;
+        int xDiff = x - fuelStationX;
+        int yDiff = y - fuelStationY;
+//        if (this.name == "agent1") {
+//            System.out.println("x = " + x + " y = " + y + " fuelX = " + fuelStationX + " fuelY = " + fuelStationY);
+//            System.out.println(" xDiff= " + xDiff + " ,yDiff= " + yDiff);
+//        }
+        if (xDiff > 0) { // go E
+            if (yDiff < 0) { //go N
+                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                    ranking = new TWDirection[]{TWDirection.N, TWDirection.E, TWDirection.W, TWDirection.S};
+                } else {
+                    ranking = new TWDirection[]{TWDirection.E, TWDirection.N, TWDirection.S, TWDirection.W};
+                }
+            } else { // go S
+                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                    ranking = new TWDirection[]{TWDirection.S, TWDirection.E, TWDirection.W, TWDirection.N};
+                } else {
+                    ranking = new TWDirection[]{TWDirection.E, TWDirection.S, TWDirection.N, TWDirection.W};
+                }
+            }
+        } else { // go W
+            if (yDiff < 0) { // go N
+                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                    ranking = new TWDirection[]{TWDirection.N, TWDirection.W, TWDirection.E, TWDirection.S};
+                } else {
+                    ranking = new TWDirection[]{TWDirection.W, TWDirection.N, TWDirection.S, TWDirection.E};
+                }
+            } else { //go S
+                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                    ranking = new TWDirection[]{TWDirection.S, TWDirection.W, TWDirection.E, TWDirection.N};
+                } else {
+                    ranking = new TWDirection[]{TWDirection.W, TWDirection.S, TWDirection.N, TWDirection.E};
+                }
+            }
+        }
+        // if (this.name == "agent1") System.out.println("" + ranking[0] + " " + ranking[1] + " " + ranking[2] + " " + ranking[3]);
+        return ranking;
+    }
+
     /**
      *
      * Functions for plans
@@ -484,7 +564,6 @@ public class GYAgent extends TWAgent {
             return new TWThought(TWAction.REFUEL, TWDirection.Z);
         }
         else{
-            AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
             //find path
 
             //the idea is during the way to fuelstation, if new hole or tile is close to agent, then
@@ -541,50 +620,51 @@ public class GYAgent extends TWAgent {
 //        System.out.println(otherAgentLocX[0]+" "+otherAgentLocY[0]);
 //        System.out.println(otherAgentLocX[1]+" "+otherAgentLocY[1]);
 //        System.out.println(generalDir);
-
-        if(checkFuelLevel())
-            state = STATE.LOW_FUEL;
-
+        computeGeneralDirRanking(); // update generalDir
+        if (this.name == "agent1") System.out.println("memory size: " + memory.getMemorySize() + " carried Tiles: " + carriedTiles.size());
         if (memory.getMemorySize() == 0) {
-            return new TWThought(TWAction.MOVE, generalDir);
+            return new TWThought(TWAction.MOVE, generalDir[0]);
         }
         TWHole hole = memory.getNearbyHole(x,y,10);
         TWTile tile = memory.getNearbyTile(x,y,10);
+        if (this.name == "agent1") System.out.println(hole == null? "hole is null" : ("hole??? " + hole.getX() + " " + hole.getY()));
+        if (this.name == "agent1") System.out.println(tile == null? "tile is null" : ("tile??? " + tile.getX() + " " + tile.getY()));
 
         // if the current location is a hole/ tile, check conditions and do
         if (hole != null && hole.getX() == x && hole.getY() == y && carriedTiles.size() != 0) {
-            return new TWThought(TWAction.PUTDOWN, generalDir);
+            return new TWThought(TWAction.PUTDOWN, generalDir[0]);
         } else if (tile != null && tile.getX() == x && tile.getY() == y && carriedTiles.size() < 3) {
-            return new TWThought(TWAction.PICKUP, generalDir);
+            return new TWThought(TWAction.PICKUP, generalDir[0]);
         }
 
         // go for the direction of the nearest hole/ tile, depend on the size of carriedTiles
         if (carriedTiles.size() != 0 && carriedTiles.size() < 3) {
             // go to holes first, if null, then go to tile
             if (hole != null) {
-                //System.out.println("go to hole");
+                if (name == "agent1") System.out.println("1/2 go to hole x: " + hole.getX() + " y: " + hole.getY());
                 return new TWThought(TWAction.MOVE, getDir(x,y,hole.getX(), hole.getY()));
             } else if (tile != null) {
-                //System.out.println("go to tile");
+                if (name == "agent1") System.out.println("1/2 go to tile x: " + tile.getX() + " y: " + tile.getY());
                 return new TWThought(TWAction.MOVE, getDir(x,y,tile.getX(), tile.getY()));
             }
         } else if (carriedTiles.size() == 0) {
             // only go to tiles, ignore holes, if null then go general dir
             if (tile != null) {
-                //System.out.println("go to tile");
+                if (name == "agent1") System.out.println("0 go to tile x: "  + tile.getX() + " y: " + tile.getY());
                 return new TWThought(TWAction.MOVE, getDir(x,y,tile.getX(), tile.getY()));
             }
         } else if (carriedTiles.size() == 3) {
             // only go to holes, ignore tiles, if null then go general dir
             if (hole != null) {
-                //System.out.println("go to hole");
+                if (name == "agent1") System.out.println("3 go to hole x: " + hole.getX() + " y: " + hole.getY());
                 return new TWThought(TWAction.MOVE, getDir(x,y,hole.getX(), hole.getY()));
             }
         }
+        if (name == "agent1") System.out.println("go general direction");
 
         //System.out.println("Default case, Simple Score: " + this.score);
         //System.out.println("FUEL level:"+this.fuelLevel);
         // default case, go general direction
-        return new TWThought(TWAction.MOVE, generalDir);
+        return new TWThought(TWAction.MOVE, generalDir[0]);
     }
 }

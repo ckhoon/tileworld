@@ -74,6 +74,9 @@ public class TWAgentWorkingMemory {
 
 		this.schedule = schedule;
 		this.memoryGrid = new ObjectGrid2D(me.getEnvironment().getxDimension(), me.getEnvironment().getyDimension());
+//		for (Int2D offset : spiral) {
+//			System.out.println("x: " + offset.x + " y: " + offset.y);
+//		}
 	}
 
 	/**
@@ -334,7 +337,8 @@ public class TWAgentWorkingMemory {
 	 * @return true if the cell is blocked in our memory
 	 */
 	public boolean isCellBlocked(int tx, int ty) {
-
+		// because we are checking the next step, so need to confirm not out of boundary
+		if (tx < 0 || tx > objects[0].length - 1 || ty < 0 || ty > objects.length - 1) return false;
 		//no memory at all, so assume not blocked
 		if (objects[tx][ty] == null) {
 			return false;

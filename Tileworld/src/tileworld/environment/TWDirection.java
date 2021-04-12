@@ -6,6 +6,8 @@ package tileworld.environment;
 
 import sim.util.Int2D;
 
+import java.util.Random;
+
 /**
  * TWDirection
  *
@@ -26,25 +28,29 @@ public enum TWDirection {
     E(1, 0) {
 
         public TWDirection next() {
-            return N;
+            int num = random.nextInt(2);
+            return num ==  0 ? N : S;
         }
     },
     N(0, -1) {
 
         public TWDirection next() {
-            return W;
+            int num = random.nextInt(2);
+            return num ==  0 ? W : E;
         }
     },
     W(-1, 0) {
 
         public TWDirection next() {
-            return S;
+            int num = random.nextInt(2);
+            return num ==  0 ? N : S;
         }
     },
     S(0, 1) {
 
         public TWDirection next() {
-            return E;
+            int num = random.nextInt(2);
+            return num ==  0 ? W : E;
         }
     },
 
@@ -57,6 +63,7 @@ public enum TWDirection {
     ;
     public final int dx;
     public final int dy;
+    Random random = new Random();
 
     public final static Int2D ORIGIN = new Int2D(0, 0);
 
