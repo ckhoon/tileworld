@@ -425,24 +425,43 @@ public class GYAgent extends TWAgent {
         // scores from distance to fuel station
         TWDirection[] ranking = new TWDirection[4];
         if (fuelLevel <= 500 && fuelLevel >= 400) { // away from fuel station
-            ranking = rankDirections();
-            addScores(scores, ranking, 3, 1, -1, -3);
+            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
+            addScores(scores, ranking, 6, 5, -6, -5);
         } else if (fuelLevel >= 300 && fuelLevel <= 400) {
-            ranking = rankDirections();
-            addScores(scores, ranking, 1, 0, 0, -1);
+            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
+            addScores(scores, ranking, 3, 2, -2, -3);
         } else if (fuelLevel >= 200 && fuelLevel <= 300) {
-            ranking = rankDirections();
-            addScores(scores, ranking, 0, 0, 0, 0);
+//            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
+//            addScores(scores, ranking, 0, 0, 0, 0);
         } else if (fuelLevel >= 100 && fuelLevel <= 200) {
-            ranking = rankDirections();
-            addScores(scores, ranking, -1, 0, 0, 1);
+            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
+            addScores(scores, ranking, -3, -2, 2, 3);
         } else if (fuelLevel <= 100) {
-            ranking = rankDirections();
-            addScores(scores, ranking, -3, -1, 1, 3);
+            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
+            addScores(scores, ranking, -6, -5, 5, 6);
         }
 
         // scores from distance between each other
         // to be implemented: add scores to the hashmap
+        int distanceToAgent1 = (int)astarPath.getMovementCost(x,y,otherAgentLocX[0], otherAgentLocY[0]);
+        int distanceToAgent2 = (int)astarPath.getMovementCost(x,y,otherAgentLocX[1], otherAgentLocY[1]);
+        if (distanceToAgent1 <= 6) { //get away with highest motivation
+            ranking = rankDirections(x, y, otherAgentLocX[0], otherAgentLocY[0]);
+            addScores(scores, ranking, 3, 2, -2, -3);
+        } else if (distanceToAgent1 > 6 && distanceToAgent1 <= 20) {
+            ranking = rankDirections(x, y, otherAgentLocX[0], otherAgentLocY[0]);
+            addScores(scores, ranking, 2, 1, -1, -2);
+        } // don't set the upper limit too high so that agents will not be pushed to corner
+
+        if (distanceToAgent2 <= 6) { //get away with highest motivation
+            ranking = rankDirections(x, y, otherAgentLocX[1], otherAgentLocY[1]);
+            addScores(scores, ranking, 3, 2, -2, -3);
+        } else if (distanceToAgent2 > 6 && distanceToAgent2 <= 20) {
+            ranking = rankDirections(x, y, otherAgentLocX[1], otherAgentLocY[1]);
+            addScores(scores, ranking, 2, 1, -1, -2);
+        } // don't set the upper limit too high so that agents will not be pushed to corner
+
+
 
         // get the final ranking based on scores
         ArrayList<TWDirection> finalRanking = new ArrayList<>();
@@ -464,10 +483,10 @@ public class GYAgent extends TWAgent {
 
     }
 
-    private TWDirection[] rankDirections() {
+    private TWDirection[] rankDirections(int x, int y, int targetX, int targetY) {
         TWDirection[] ranking = null;
-        int xDiff = x - fuelStationX;
-        int yDiff = y - fuelStationY;
+        int xDiff = x - targetX;
+        int yDiff = y - targetY;
 //        if (this.name == "agent1") {
 //            System.out.println("x = " + x + " y = " + y + " fuelX = " + fuelStationX + " fuelY = " + fuelStationY);
 //            System.out.println(" xDiff= " + xDiff + " ,yDiff= " + yDiff);
