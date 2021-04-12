@@ -602,7 +602,8 @@ public class GYAgent extends TWAgent {
             else
                 nextdir = pathToTarget.getStep(0).getDirection();
 
-            nextdir = collectNearByOnMyWay(nextdir);
+            if (fuelLevel > 300)
+                nextdir = collectNearByOnMyWay(nextdir);
 
             return new TWThought(TWAction.MOVE, nextdir);
         }
@@ -612,20 +613,20 @@ public class GYAgent extends TWAgent {
     private TWThought planFindFuelStation(){
         if(!searchX){
             if (y<Parameters.defaultSensorRange*2) {
-                this.targetY = getEnvironment().getyDimension() - Parameters.defaultSensorRange+1;
+                this.targetY = getEnvironment().getyDimension() - Parameters.defaultSensorRange;
             }
             else{
-                this.targetY = Parameters.defaultSensorRange-1;
+                this.targetY = Parameters.defaultSensorRange;
             }
             searchX = true;
         }else{
-            this.targetX += (2*(Parameters.defaultSensorRange)-1);
+            this.targetX += (2*(Parameters.defaultSensorRange));
 
-            if (this.x >= getEnvironment().getxDimension()-Parameters.defaultSensorRange-1)
+            if (this.x >= getEnvironment().getxDimension()-Parameters.defaultSensorRange)
                 this.targetX = Parameters.defaultSensorRange-1;
 
             if (this.targetX >= getEnvironment().getxDimension())
-                this.targetX = getEnvironment().getxDimension()-Parameters.defaultSensorRange-1;
+                this.targetX = getEnvironment().getxDimension()-Parameters.defaultSensorRange;
 
             searchX = false;
         }
