@@ -31,7 +31,9 @@ public class GYAgent extends TWAgent {
     private Message message;
     private STATE state;
     private int targetX, targetY;
-    private int temptargetX,temptargetY;
+    private int temptargetX=-1,temptargetY=-1;
+    private TWDirection tempdir;
+    private int tempflag=-1;
     private String[] otherAgentName;
     private int[] otherAgentLocX = new int[2];
     private int[] otherAgentLocY = new int[2];
@@ -78,16 +80,7 @@ public class GYAgent extends TWAgent {
 //        this.memory = new TWAgentWorkingMemory(this, env.schedule, env.getxDimension(), env.getyDimension());
     }
 
-    public STATE checkFuel(){
-        if (this.fuelLevel>=250)
-            //0 means the fuel level is enough
-            return STATE.FULL_FUEL;
-        else if (this.fuelLevel>=100)
-            return STATE.PLAN_TO_REFUEL;
-        else return STATE.LOW_FUEL;
 
-
-    }
 
 
     public void communicate() {
@@ -258,8 +251,6 @@ public class GYAgent extends TWAgent {
      *
      */
 
-
-    //replace this with astarpathgenerator? The first step is the direction? I use this in path to fuelstation --By zizhao
     private TWDirection getDirSimple(int x, int y, int targetX, int targetY) {
         // System.out.println("Inside get direction: " + x + " " + y + " " + targetX + " " + targetY);
         TWDirection dir;
@@ -369,6 +360,12 @@ public class GYAgent extends TWAgent {
                         if (this.hasTile())
                             return TWDirection.W;
                     }
+
+                    tempflag=1;
+                    tempdir=TWDirection.E;
+
+
+
                 } else if (this.getEnvironment().doesCellContainObject(x + 1, y)) {
                     //System.out.println("something here");
                     TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
@@ -381,6 +378,8 @@ public class GYAgent extends TWAgent {
                         if (this.hasTile())
                             return TWDirection.E;
                     }
+                    tempflag=1;
+                    tempdir=TWDirection.W;
                 }
             }
         }else if (nextDir == TWDirection.E | nextDir == TWDirection.W){
@@ -397,6 +396,9 @@ public class GYAgent extends TWAgent {
                         if (this.hasTile())
                             return TWDirection.N;
                     }
+
+                    tempflag=1;
+                    tempdir=TWDirection.S;
                 } else if (this.getEnvironment().doesCellContainObject(x, y+1)) {
                     //System.out.println("something here");
                     TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
@@ -409,6 +411,9 @@ public class GYAgent extends TWAgent {
                         if (this.hasTile())
                             return TWDirection.S;
                     }
+                    tempflag=1;
+                    tempdir=TWDirection.N;
+
                 }
             }
         }
@@ -520,7 +525,7 @@ public class GYAgent extends TWAgent {
                 }
             }
         }
-        // if (this.name == "agent1") System.out.println("" + ranking[0] + " " + ranking[1] + " " + ranking[2] + " " + ranking[3]);
+
         return ranking;
     }
 
@@ -539,7 +544,6 @@ public class GYAgent extends TWAgent {
 
         if (fuelStationX != -1) {
             sendFuelStationLocation();
-            //System.out.println("FFFFFFFFFFFFFFFFFFFF");
             state = STATE.PLAN_GREEDY;
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
@@ -551,8 +555,15 @@ public class GYAgent extends TWAgent {
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
         else{
+
             TWPath pathToTarget =astarPath.findPath(this.x, this.y, targetX, targetY);
             TWDirection nextdir;
+
+            if (tempflag!=-1){
+                tempflag=-1;
+                return new TWThought(TWAction.MOVE, tempdir);
+            }
+
             try {
                 nextdir = pathToTarget.getStep(0).getDirection();
             }
@@ -591,25 +602,6 @@ public class GYAgent extends TWAgent {
             return new TWThought(TWAction.REFUEL, TWDirection.Z);
         } else {
             return new TWThought(TWAction.MOVE, getDir(this.x, this.y, fuelStationX, fuelStationY));
-
-            //find path
-
-            //the idea is during the way to fuelstation, if new hole or tile is close to agent, then
-            //check the hole/tile location,
-            // set to temptargetX,temptargetY
-            // compare the distance
-//            TWHole hole = memory.getNearbyHole(x,y,10);
-//            TWTile tile = memory.getNearbyTile(x,y,10);
-            //temptargetX=hole.getX();
-            //temptargetY=hole.getY();
-
-            //TWPath path_to_temp=a.findPath(this.x, this.y, temptargetX,temptargetY);
-            //TWPath temp_to_station=a.findPath(this.x, this.y, temptargetX,temptargetY);
-
-
-            //if path_to_temp+temp_to_station is much larger than path_to_station,refused to do so.---halfway idea
-
-
         }
 
         //return null;
@@ -620,33 +612,6 @@ public class GYAgent extends TWAgent {
     }
 
     private TWThought planGreedy(){
-
-        //two agents are close
-
-
-        //depend
-        //generalDir is change to the dir which maximize the manhattan distance with the other 2 agents(perfer leave away from each other)
-
-//In test
-//        double d_up=sumdistance(x,y-1,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double d_down=sumdistance(x,y+1,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double d_left=sumdistance(x-1,y,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double d_right=sumdistance(x+1,y,otherAgentLocX[0],otherAgentLocY[0],otherAgentLocX[1],otherAgentLocY[1]);
-//        double mdis=Math.max(Math.max(d_up,d_down),Math.max(d_left,d_right));
-//        if (mdis==d_up){
-//            generalDir=TWDirection.N;
-//        }else if (mdis==d_down){
-//            generalDir=TWDirection.S;
-//        }else if (mdis==d_left){
-//            generalDir=TWDirection.W;
-//        }else{
-//            generalDir=TWDirection.E;
-//        }
-//        System.out.println("TEST");
-//        System.out.println(x+" "+y);
-//        System.out.println(otherAgentLocX[0]+" "+otherAgentLocY[0]);
-//        System.out.println(otherAgentLocX[1]+" "+otherAgentLocY[1]);
-//        System.out.println(generalDir);
         computeGeneralDirRanking(); // update generalDir
         if (this.name == "agent1") System.out.println("memory size: " + memory.getMemorySize() + " carried Tiles: " + carriedTiles.size());
         if (memory.getMemorySize() == 0) {
