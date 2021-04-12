@@ -26,32 +26,28 @@ import java.util.Random;
 public enum TWDirection {
 
     E(1, 0) {
-
         public TWDirection next() {
-            int num = random.nextInt(2);
-            return num ==  0 ? N : S;
+            return N;
         }
     },
     N(0, -1) {
-
         public TWDirection next() {
-            int num = random.nextInt(2);
-            return num ==  0 ? W : E;
+            return W;
         }
     },
     W(-1, 0) {
 
         public TWDirection next() {
-            int num = random.nextInt(2);
-            return num ==  0 ? N : S;
+            return S;
         }
+
     },
     S(0, 1) {
 
         public TWDirection next() {
-            int num = random.nextInt(2);
-            return num ==  0 ? W : E;
+            return E;
         }
+
     },
 
     Z(0, 0) {//no direction - not really used
@@ -63,7 +59,6 @@ public enum TWDirection {
     ;
     public final int dx;
     public final int dy;
-    Random random = new Random();
 
     public final static Int2D ORIGIN = new Int2D(0, 0);
 

@@ -10,6 +10,7 @@ import javax.swing.plaf.nimbus.State;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import static tileworld.environment.TWDirection.N;
 import static tileworld.environment.TWDirection.S;
@@ -36,10 +37,9 @@ public class GYAgent extends TWAgent {
     private int[] otherAgentLocY = new int[2];
     private long[] otherAgentTimestamp = new long[2];
     private int distanceToFuelStation = -1;
-    AstarPathGenerator a = new AstarPathGenerator(this.getEnvironment(), this, 999);
     private TWDirection[] generalDir = new TWDirection[4];
-    private int generalDirIndex = 0; //representing the index of generalDir
     private AstarPathGenerator astarPath;
+    private boolean goGeneralDirection = false;
 
 
     /**
@@ -108,7 +108,7 @@ public class GYAgent extends TWAgent {
         //System.out.println("____________________________________________________________________________________________");
         sendMyLocation();
 
-        if (fuelStationX != -1) distanceToFuelStation = (int)a.getMovementCost(x,y,fuelStationX,fuelStationY);
+        if (fuelStationX != -1) distanceToFuelStation = (int)astarPath.getMovementCost(x,y,fuelStationX,fuelStationY);
         checkLowFuelLevel(); // if fuel level < 50 or fuel level < 2 * distance, change to low_fuel mode
 
         switch(state){
@@ -155,21 +155,21 @@ public class GYAgent extends TWAgent {
                     TWDirection dir = thought.getDirection();
                     if(getEnvironment().isCellBlocked(x+dir.dx, y+dir.dy)) {
                         System.out.println("Blocked, finding the next possible direction");
-                        if (state == STATE.PLAN_GREEDY) {
-                            if (generalDirIndex < 3) generalDirIndex++;
-                            dir = generalDir[generalDirIndex];
+                        if (goGeneralDirection) {
+                            int generalDirIndex = 1;
+                            while (generalDirIndex <= 3 && getEnvironment().isCellBlocked(x+dir.dx, y+dir.dy)) {
+                                dir = generalDir[generalDirIndex++];
+                            }
                         } else {
-                            //System.out.println("cell blocked");
                             prevMoveBlocked = true;
                             prevDir = dir;
                             dir = getAltDirection(dir); // randomly pick one direction from two
-                            // generalDir = dir;
                         }
                     } else
                         prevMoveBlocked = false;
                     move(dir);
                 } catch (CellBlockedException ex) {
-                    System.out.println("Blocked"); //should not happen because checked before unless surrounded by 4 obstacles;
+                    System.out.println("Blocked twice, not move in this round"); //should not happen because checked before unless surrounded by 4 obstacles;
                 }
                 break;
             case PICKUP:
@@ -187,9 +187,6 @@ public class GYAgent extends TWAgent {
             case IDLE:
                 break;
         }
-
-
-
     }
 
     public String getName() {
@@ -263,7 +260,7 @@ public class GYAgent extends TWAgent {
 
 
     //replace this with astarpathgenerator? The first step is the direction? I use this in path to fuelstation --By zizhao
-    private TWDirection getDir(int x, int y, int targetX, int targetY) {
+    private TWDirection getDirSimple(int x, int y, int targetX, int targetY) {
         // System.out.println("Inside get direction: " + x + " " + y + " " + targetX + " " + targetY);
         TWDirection dir;
         if (prevMoveBlocked) {
@@ -285,9 +282,22 @@ public class GYAgent extends TWAgent {
         return dir;
     }
 
+    private TWDirection getDir(int x, int y, int targetX, int targetY) {
+        TWPath path_to_station =astarPath.findPath(this.x, this.y, targetX, targetY);
+        if (path_to_station == null) return getDirSimple(x, y, targetX, targetY);
+        TWDirection dir = path_to_station.getStep(0).getDirection();
+        return dir;
+    }
+
     private TWDirection getAltDirection(TWDirection dir){
-        while(getEnvironment().isCellBlocked(x+dir.dx, y+dir.dy))
-            dir = dir.next();
+        Random random = new Random();
+        int num = random.nextInt(2);
+        switch (dir) {
+            case N: case S:
+                return num == 0 ? TWDirection.W : TWDirection.E;
+            case W: case E:
+                return num == 0 ? TWDirection.N : TWDirection.S;
+        }
         return dir;
     }
 
@@ -322,6 +332,7 @@ public class GYAgent extends TWAgent {
     private boolean checkLowFuelLevel() {
         if ((distanceToFuelStation != -1 && fuelLevel <= 2 * distanceToFuelStation) || (this.fuelLevel<=50)) {
             state = STATE.LOW_FUEL;
+            goGeneralDirection = false;
             return true;
         }
         return false;
@@ -405,7 +416,6 @@ public class GYAgent extends TWAgent {
     }
 
     private void computeGeneralDirRanking() {
-        generalDirIndex = 0; //reset index
         HashMap<TWDirection, Integer> scores = new HashMap<>();
         scores.put(TWDirection.N, 0);
         scores.put(TWDirection.S, 0);
@@ -557,32 +567,30 @@ public class GYAgent extends TWAgent {
     }
 
     private TWThought planGostationnow(){
-        //maybe the value is set to size*2 is better?
-
         if (this.x==fuelStationX &&this.y==fuelStationY) {
             state = STATE.PLAN_GREEDY;
             return new TWThought(TWAction.REFUEL, TWDirection.Z);
-        }
-        else{
+        } else {
+            return new TWThought(TWAction.MOVE, getDir(this.x, this.y, fuelStationX, fuelStationY));
+
             //find path
 
             //the idea is during the way to fuelstation, if new hole or tile is close to agent, then
             //check the hole/tile location,
             // set to temptargetX,temptargetY
             // compare the distance
-            TWHole hole = memory.getNearbyHole(x,y,10);
-            TWTile tile = memory.getNearbyTile(x,y,10);
+//            TWHole hole = memory.getNearbyHole(x,y,10);
+//            TWTile tile = memory.getNearbyTile(x,y,10);
             //temptargetX=hole.getX();
             //temptargetY=hole.getY();
-            TWPath path_to_station =a.findPath(this.x, this.y, fuelStationX, fuelStationY);
+
             //TWPath path_to_temp=a.findPath(this.x, this.y, temptargetX,temptargetY);
             //TWPath temp_to_station=a.findPath(this.x, this.y, temptargetX,temptargetY);
 
 
             //if path_to_temp+temp_to_station is much larger than path_to_station,refused to do so.---halfway idea
 
-            TWDirection nextdir=path_to_station.getStep(0).getDirection();
-            return new TWThought(TWAction.MOVE,nextdir);
+
         }
 
         //return null;
@@ -623,19 +631,25 @@ public class GYAgent extends TWAgent {
         computeGeneralDirRanking(); // update generalDir
         if (this.name == "agent1") System.out.println("memory size: " + memory.getMemorySize() + " carried Tiles: " + carriedTiles.size());
         if (memory.getMemorySize() == 0) {
+            goGeneralDirection = true;
             return new TWThought(TWAction.MOVE, generalDir[0]);
         }
+
         TWHole hole = memory.getNearbyHole(x,y,10);
         TWTile tile = memory.getNearbyTile(x,y,10);
-        if (this.name == "agent1") System.out.println(hole == null? "hole is null" : ("hole??? " + hole.getX() + " " + hole.getY()));
-        if (this.name == "agent1") System.out.println(tile == null? "tile is null" : ("tile??? " + tile.getX() + " " + tile.getY()));
+
+        goGeneralDirection = false;
 
         // if the current location is a hole/ tile, check conditions and do
         if (hole != null && hole.getX() == x && hole.getY() == y && carriedTiles.size() != 0) {
-            return new TWThought(TWAction.PUTDOWN, generalDir[0]);
+            return new TWThought(TWAction.PUTDOWN, TWDirection.Z);
         } else if (tile != null && tile.getX() == x && tile.getY() == y && carriedTiles.size() < 3) {
-            return new TWThought(TWAction.PICKUP, generalDir[0]);
+            return new TWThought(TWAction.PICKUP, TWDirection.Z);
+        } else if (x == fuelStationX && y == fuelStationY && fuelLevel <= 250) {
+            return new TWThought(TWAction.REFUEL, TWDirection.Z);
         }
+        // if very near to fuel station and less than half fuel, directly go refuel
+        if (astarPath.getMovementCost(x,y,fuelStationX,fuelStationY) <= 5 && fuelLevel <= 250) return new TWThought(TWAction.MOVE, getDir(x,y,fuelStationX, fuelStationY));
 
         // go for the direction of the nearest hole/ tile, depend on the size of carriedTiles
         if (carriedTiles.size() != 0 && carriedTiles.size() < 3) {
@@ -665,6 +679,7 @@ public class GYAgent extends TWAgent {
         //System.out.println("Default case, Simple Score: " + this.score);
         //System.out.println("FUEL level:"+this.fuelLevel);
         // default case, go general direction
+        goGeneralDirection = true;
         return new TWThought(TWAction.MOVE, generalDir[0]);
     }
 }
