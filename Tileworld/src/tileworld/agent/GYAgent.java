@@ -27,6 +27,7 @@ public class GYAgent extends TWAgent {
     // private Boolean foundFuel; use fuelStationX != -1
     private Boolean searchX;
     private Boolean prevMoveBlocked;
+    private Boolean diverted;
     private TWDirection prevDir;
     private Message message;
     private STATE state;
@@ -73,6 +74,7 @@ public class GYAgent extends TWAgent {
         this.otherAgentName = new String[2];
 //        this.score = 0; done in super function
         this.fuelLevel = fuelLevel;
+        this.diverted = false;
 
         this.astarPath = new AstarPathGenerator(this.getEnvironment(), this, 999);
 //        this.carriedTiles = new ArrayList<TWTile>();
@@ -99,7 +101,6 @@ public class GYAgent extends TWAgent {
         checkMessage();
         //System.out.println("I'm' "+this.name+" my position is "+this.x+","+this.y);
         //System.out.println("____________________________________________________________________________________________");
-        sendMyLocation();
 
         if (fuelStationX != -1) distanceToFuelStation = (int)astarPath.getMovementCost(x,y,fuelStationX,fuelStationY);
         checkLowFuelLevel(); // if fuel level < 50 or fuel level < 2 * distance, change to low_fuel mode
@@ -115,6 +116,7 @@ public class GYAgent extends TWAgent {
                 thought = planFindFuelStation();
                 break;
             case PLAN_GREEDY:
+                sendMyLocation();
                 thought = planGreedy();
                 break;
             case LOW_FUEL: // case 1: fuel level < distance * 2; case 2: fuel level < 50
@@ -129,10 +131,10 @@ public class GYAgent extends TWAgent {
         //to refuel, find the path to fuel station, then follow the direction
         //if (this.fuelLevel200 100)
         //highest level: lowest fuellvel
-       // if (this.fuelLevel>=100 && this.fuelLevel<=200)
-           // state=STATE.PLAN_TO_REFUEL
-            //thought=new TWThought(LAN_TO_REFUEL)
-      //    if (this.fuelLevel<=200
+        // if (this.fuelLevel>=100 && this.fuelLevel<=200)
+        // state=STATE.PLAN_TO_REFUEL
+        //thought=new TWThought(LAN_TO_REFUEL)
+        //    if (this.fuelLevel<=200
 
         return thought ;
     }
@@ -212,12 +214,17 @@ public class GYAgent extends TWAgent {
                             otherAgentLocY[1] = m.getY();
                             otherAgentTimestamp[1] = m.getTimestamp();
                         }
+                        if (fuelStationX == -1)
+                            if(m.getFuelStationX() != -1) {
+                                this.fuelStationX = m.getFuelStationX();
+                                this.fuelStationY = m.getFuelStationY();
+                            }
                         if (state == STATE.SPLIT_REGION)
                             getRegion();
                         break;
                     case FOUND_FUEL:
-                        this.fuelStationX = m.getX();
-                        this.fuelStationY = m.getY();
+                        this.fuelStationX = m.getFuelStationX();
+                        this.fuelStationY = m.getFuelStationY();
                         break;
                     default:
                         System.out.println("Not suppose to see this.");
@@ -231,6 +238,8 @@ public class GYAgent extends TWAgent {
         this.message.setMessageType(Message.MESSAGE_TYPE.MY_X_Y);
         this.message.setX(this.getX());
         this.message.setY(this.getY());
+        this.message.setFuelStationX(fuelStationX);
+        this.message.setFuelStationY(fuelStationY);
         this.message.setTimestamp();
         this.message.setMessage("nothing here");
         hasNewMessage = true;
@@ -240,6 +249,8 @@ public class GYAgent extends TWAgent {
         this.message.setMessageType(Message.MESSAGE_TYPE.FOUND_FUEL);
         this.message.setX(fuelStationX);
         this.message.setY(fuelStationY);
+        this.message.setFuelStationX(fuelStationX);
+        this.message.setFuelStationY(fuelStationY);
         this.message.setTimestamp();
         this.message.setMessage("nothing here");
         hasNewMessage = true;
@@ -311,8 +322,8 @@ public class GYAgent extends TWAgent {
             int[] xCorner = new int[]{0,
                     (int)Math.floor(getEnvironment().getxDimension()/3),
                     (int)Math.floor(getEnvironment().getxDimension()*2/3)};
-            this.targetX = xCorner[index] + Parameters.defaultSensorRange;
-            this.targetY = Parameters.defaultSensorRange;
+            this.targetX = xCorner[index] + Parameters.defaultSensorRange-1;
+            this.targetY = Parameters.defaultSensorRange-1;
             searchX = false;
             state = STATE.MOVE_TO_CORNER;
         }
@@ -347,75 +358,88 @@ public class GYAgent extends TWAgent {
     }
 
     private TWDirection collectNearByOnMyWay(TWDirection nextDir){
-        if (nextDir == TWDirection.S | nextDir == TWDirection.N){
-            if (x > 0 && x < getEnvironment().getxDimension()-1) {
-                if (this.getEnvironment().doesCellContainObject(x - 1, y)) {
-                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
-                            .get(this.getX()-1, this.getY());
-                    if (e instanceof TWTile) {
-                        if (this.carriedTiles.size() < 3) {
-                            return TWDirection.W;
+        if (!diverted) {
+            if (nextDir == TWDirection.S | nextDir == TWDirection.N) {
+                if (x > 0 && x < getEnvironment().getxDimension() - 1) {
+                    if (this.getEnvironment().doesCellContainObject(x - 1, y)) {
+                        TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                                .get(this.getX() - 1, this.getY());
+                        if (e instanceof TWTile) {
+                            if (this.carriedTiles.size() < 3) {
+                                prevDir = TWDirection.E;
+                                diverted = true;
+                                return TWDirection.W;
+                            }
+                        } else if (e instanceof TWHole) {
+                            if (this.hasTile()) {
+                                prevDir = TWDirection.E;
+                                diverted = true;
+                                return TWDirection.W;
+                            }
                         }
-                    } else if (e instanceof TWHole) {
-                        if (this.hasTile())
-                            return TWDirection.W;
-                    }
-
-                    tempflag=1;
-                    tempdir=TWDirection.E;
-
-
-
-                } else if (this.getEnvironment().doesCellContainObject(x + 1, y)) {
-                    //System.out.println("something here");
-                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
-                            .get(this.getX()+1, this.getY());
-                    if (e instanceof TWTile) {
-                        if (this.carriedTiles.size() < 3) {
-                            return TWDirection.E;
+                    } else if (this.getEnvironment().doesCellContainObject(x + 1, y)) {
+                        //System.out.println("something here");
+                        TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                                .get(this.getX() + 1, this.getY());
+                        if (e instanceof TWTile) {
+                            if (this.carriedTiles.size() < 3) {
+                                prevDir = TWDirection.W;
+                                diverted = true;
+                                return TWDirection.E;
+                            }
+                        } else if (e instanceof TWHole) {
+                            if (this.hasTile()) {
+                                prevDir = TWDirection.W;
+                                diverted = true;
+                                return TWDirection.E;
+                            }
                         }
-                    } else if (e instanceof TWHole) {
-                        if (this.hasTile())
-                            return TWDirection.E;
                     }
-                    tempflag=1;
-                    tempdir=TWDirection.W;
+                }
+            } else if (nextDir == TWDirection.E | nextDir == TWDirection.W) {
+                //System.out.println(name + " " + nextDir);
+                if (y > 0 && y < getEnvironment().getyDimension() - 1) {
+                    if (this.getEnvironment().doesCellContainObject(x, y - 1)) {
+                        TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                                .get(this.getX(), this.getY() - 1);
+                        if (e instanceof TWTile) {
+                            if (this.carriedTiles.size() < 3) {
+                                prevDir = TWDirection.S;
+                                diverted = true;
+                                return TWDirection.N;
+                            }
+                        } else if (e instanceof TWHole) {
+                            if (this.hasTile()) {
+                                prevDir = TWDirection.S;
+                                diverted = true;
+                                return TWDirection.N;
+                            }
+                        }
+                    } else if (this.getEnvironment().doesCellContainObject(x, y + 1)) {
+                        //System.out.println("something here");
+                        TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
+                                .get(this.getX(), this.getY() + 1);
+                        if (e instanceof TWTile) {
+                            if (this.carriedTiles.size() < 3) {
+                                prevDir = TWDirection.N;
+                                diverted = true;
+                                return TWDirection.S;
+                            }
+                        } else if (e instanceof TWHole) {
+                            if (this.hasTile()) {
+                                prevDir = TWDirection.N;
+                                diverted = true;
+                                return TWDirection.S;
+                            }
+                        }
+                    }
                 }
             }
-        }else if (nextDir == TWDirection.E | nextDir == TWDirection.W){
-            //System.out.println(name + " " + nextDir);
-            if (y > 0 && y < getEnvironment().getyDimension()-1) {
-                if (this.getEnvironment().doesCellContainObject(x, y-1)) {
-                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
-                            .get(this.getX(), this.getY()-1);
-                    if (e instanceof TWTile) {
-                        if (this.carriedTiles.size() < 3) {
-                            return TWDirection.N;
-                        }
-                    } else if (e instanceof TWHole) {
-                        if (this.hasTile())
-                            return TWDirection.N;
-                    }
-
-                    tempflag=1;
-                    tempdir=TWDirection.S;
-                } else if (this.getEnvironment().doesCellContainObject(x, y+1)) {
-                    //System.out.println("something here");
-                    TWEntity e = (TWEntity) this.getMemory().getMemoryGrid()
-                            .get(this.getX(), this.getY()+1);
-                    if (e instanceof TWTile) {
-                        if (this.carriedTiles.size() < 3) {
-                            return TWDirection.S;
-                        }
-                    } else if (e instanceof TWHole) {
-                        if (this.hasTile())
-                            return TWDirection.S;
-                    }
-                    tempflag=1;
-                    tempdir=TWDirection.N;
-
-                }
-            }
+        }
+        else
+        {
+            nextDir = prevDir;
+            diverted = false;
         }
         return nextDir;
     }
@@ -529,6 +553,17 @@ public class GYAgent extends TWAgent {
         return ranking;
     }
 
+    private boolean checkTargetNotBlock()
+    {
+        if (Math.abs(this.x - targetX) < Parameters.defaultSensorRange)
+            if (Math.abs(this.y - targetY) < Parameters.defaultSensorRange)
+                if(getEnvironment().isCellBlocked(targetX, targetY))
+                    return true;
+
+        return false;
+
+    }
+
     /**
      *
      * Functions for plans
@@ -555,41 +590,43 @@ public class GYAgent extends TWAgent {
             return new TWThought(TWAction.IDLE, TWDirection.Z);
         }
         else{
+            if (checkTargetNotBlock()) {
+                state = STATE.FIND_FUEL_STATION;
+                return new TWThought(TWAction.IDLE, TWDirection.Z);
+            }
 
             TWPath pathToTarget =astarPath.findPath(this.x, this.y, targetX, targetY);
             TWDirection nextdir;
-
-            if (tempflag!=-1){
-                tempflag=-1;
-                return new TWThought(TWAction.MOVE, tempdir);
-            }
-
-            try {
+            if (pathToTarget == null)
+                nextdir = getDirSimple(x, y, targetX, targetY);
+            else
                 nextdir = pathToTarget.getStep(0).getDirection();
-            }
-            catch(Exception e)
-            {
-                nextdir = TWDirection.Z;
-            }
 
             nextdir = collectNearByOnMyWay(nextdir);
 
             return new TWThought(TWAction.MOVE, nextdir);
         }
-        //return new TWThought(TWAction.MOVE, getDir(x,y,targetX, targetY));
+            //return new TWThought(TWAction.MOVE, getDir(x,y,targetX, targetY));
     }
 
     private TWThought planFindFuelStation(){
         if(!searchX){
-            if (y==Parameters.defaultSensorRange) {
-                this.targetY = getEnvironment().getyDimension() - Parameters.defaultSensorRange;
+            if (y<Parameters.defaultSensorRange*2) {
+                this.targetY = getEnvironment().getyDimension() - Parameters.defaultSensorRange+1;
             }
             else{
-                this.targetY = Parameters.defaultSensorRange;
+                this.targetY = Parameters.defaultSensorRange-1;
             }
             searchX = true;
         }else{
-            this.targetX += (2*Parameters.defaultSensorRange);
+            this.targetX += (2*(Parameters.defaultSensorRange)-1);
+
+            if (this.x >= getEnvironment().getxDimension()-Parameters.defaultSensorRange-1)
+                this.targetX = Parameters.defaultSensorRange-1;
+
+            if (this.targetX >= getEnvironment().getxDimension())
+                this.targetX = getEnvironment().getxDimension()-Parameters.defaultSensorRange-1;
+
             searchX = false;
         }
         state = STATE.MOVE_TO_CORNER;

@@ -14,8 +14,10 @@ public class Message {
 	private TWObject object;
 	private int x;
 	private int y;
+	private int fuelStationX;
+	private int fuelStationY;
 	private long timestamp;
-	
+
 	public Message(String from, String to, String message){
 		this.from = from;
 		this.to = to;
@@ -41,6 +43,10 @@ public class Message {
 
 	public int getY() { return this.y;}
 
+	public int getFuelStationX() { return this.fuelStationX;}
+
+	public int getFuelStationY() { return this.fuelStationY;}
+
 	public long getTimestamp(){return this.timestamp;}
 
 	public MESSAGE_TYPE getMessageType() { return this.messageType;}
@@ -52,6 +58,10 @@ public class Message {
 	public void setX(int x) { this.x = x;}
 
 	public void setY(int y) { this.y = y;}
+
+	public void setFuelStationX(int x) { this.fuelStationX = x;}
+
+	public void setFuelStationY(int y) { this.fuelStationY = y;}
 
 	public void setTimestamp(){this.timestamp = System.nanoTime();}
 
