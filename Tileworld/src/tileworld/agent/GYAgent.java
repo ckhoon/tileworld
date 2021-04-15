@@ -47,7 +47,8 @@ public class GYAgent extends TWAgent {
     // depend on name of the agent, set the fixedLoc
     private int[] fixedLoc1;
     private int[] fixedLoc2;
-    private boolean goLoc1;
+    private int[] fixedLoc3;
+    private int goLoc;
 
     /**
      * Fuel level, automatically decremented once per move.
@@ -88,17 +89,21 @@ public class GYAgent extends TWAgent {
         int yDim = getEnvironment().getyDimension();
         if (name.equals("agent1")) {
             fixedLoc1 = new int[]{xDim/8, yDim/6};
-            fixedLoc2 = new int[]{xDim*3/8, yDim*3/6};
+            fixedLoc2 = new int[]{xDim*3/8, yDim/6};
+            fixedLoc3 = new int[]{xDim*2/8, yDim*4/6};
         } else if (name.equals("agent2")) {
-            fixedLoc1 = new int[]{xDim*7/8, yDim/6};
-            fixedLoc2 = new int[]{xDim*5/8, yDim*3/6};
+            fixedLoc1 = new int[]{xDim*5/8, yDim/6};
+            fixedLoc2 = new int[]{xDim*7/8, yDim/6};
+            fixedLoc3 = new int[]{xDim*6/8, yDim*4/6};
         } else if (name.equals("agent3")) {
             fixedLoc1 = new int[]{xDim*1/8, yDim*5/6};
-            fixedLoc2 = new int[]{xDim*7/8, yDim*5/6};
+            fixedLoc2 = new int[]{xDim*4/8, yDim*4/6};
+            fixedLoc3 = new int[]{xDim*7/8, yDim*5/6};
         }
         System.out.println("fixed 1 " + fixedLoc1[0] + " " + fixedLoc1[1]);
         System.out.println("fixed 2 " + fixedLoc2[0] + " " + fixedLoc2[1]);
-        goLoc1 = true;
+        System.out.println("fixed 3 " + fixedLoc3[0] + " " + fixedLoc3[1]);
+        goLoc = 1;
     }
 
 
@@ -472,19 +477,21 @@ public class GYAgent extends TWAgent {
 
     private void checkSwitchTarget() {
         // target is loc1
-        if (goLoc1 && (int)astarPath.getMovementCost(x,y,fixedLoc1[0],fixedLoc1[1]) <= 4) {
-            goLoc1 = false;
-            if (name.equals("agent1")) {
-                System.out.println("switched");
-            }
+        if (goLoc == 1 && (int)astarPath.getMovementCost(x,y,fixedLoc1[0],fixedLoc1[1]) <= 4) {
+            goLoc = 2;
+//            if (name.equals("agent1")) {
+//                System.out.println("switched");
+//            }
             return;
         }
         // target is loc2, get near
-        if (goLoc1 == false && (int)astarPath.getMovementCost(x,y,fixedLoc2[0],fixedLoc2[1]) <= 4) {
-            goLoc1 = true;
-            if (name.equals("agent1")) {
-                System.out.println("switched");
-            }
+        if (goLoc == 2 && (int)astarPath.getMovementCost(x,y,fixedLoc2[0],fixedLoc2[1]) <= 4) {
+            goLoc = 3;
+            return;
+        }
+
+        if (goLoc == 3 && (int)astarPath.getMovementCost(x,y,fixedLoc3[0],fixedLoc3[1]) <= 4) {
+            goLoc = 1;
             return;
         }
     }
@@ -537,7 +544,7 @@ public class GYAgent extends TWAgent {
         } // don't set the upper limit too high so that agents will not be pushed to corner
 
         // scores to go to fixed location
-        int[] fixedLoc = goLoc1 == true ? fixedLoc1 : fixedLoc2;
+        int[] fixedLoc = goLoc == 1 ? fixedLoc1 : (goLoc == 2 ? fixedLoc2 :fixedLoc3);
         ranking = rankDirections(x,y,fixedLoc[0], fixedLoc[1]); //the ranking is to go away
         addScores(scores, ranking, -5, -4, 4,5);
 
