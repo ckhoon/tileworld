@@ -44,6 +44,10 @@ public class GYAgent extends TWAgent {
     private AstarPathGenerator astarPath;
     private boolean goGeneralDirection = false;
 
+    // depend on name of the agent, set the fixedLoc
+    private int[] fixedLoc1;
+    private int[] fixedLoc2;
+    private boolean goLoc1;
 
     /**
      * Fuel level, automatically decremented once per move.
@@ -80,7 +84,23 @@ public class GYAgent extends TWAgent {
 //        this.carriedTiles = new ArrayList<TWTile>();
 //        this.sensor = new TWAgentSensor(this, Parameters.defaultSensorRange);
 //        this.memory = new TWAgentWorkingMemory(this, env.schedule, env.getxDimension(), env.getyDimension());
+        int xDim = getEnvironment().getxDimension();
+        int yDim = getEnvironment().getyDimension();
+        if (name.equals("agent1")) {
+            fixedLoc1 = new int[]{xDim/8, yDim/6};
+            fixedLoc2 = new int[]{xDim*3/8, yDim*3/6};
+        } else if (name.equals("agent2")) {
+            fixedLoc1 = new int[]{xDim*7/8, yDim/6};
+            fixedLoc2 = new int[]{xDim*5/8, yDim*3/6};
+        } else if (name.equals("agent3")) {
+            fixedLoc1 = new int[]{xDim*1/8, yDim*5/6};
+            fixedLoc2 = new int[]{xDim*7/8, yDim*5/6};
+        }
+        System.out.println("fixed 1 " + fixedLoc1[0] + " " + fixedLoc1[1]);
+        System.out.println("fixed 2 " + fixedLoc2[0] + " " + fixedLoc2[1]);
+        goLoc1 = true;
     }
+
 
 
 
@@ -450,6 +470,25 @@ public class GYAgent extends TWAgent {
         return nextDir;
     }
 
+    private void checkSwitchTarget() {
+        // target is loc1
+        if (goLoc1 && (int)astarPath.getMovementCost(x,y,fixedLoc1[0],fixedLoc1[1]) <= 4) {
+            goLoc1 = false;
+            if (name.equals("agent1")) {
+                System.out.println("switched");
+            }
+            return;
+        }
+        // target is loc2, get near
+        if (goLoc1 == false && (int)astarPath.getMovementCost(x,y,fixedLoc2[0],fixedLoc2[1]) <= 4) {
+            goLoc1 = true;
+            if (name.equals("agent1")) {
+                System.out.println("switched");
+            }
+            return;
+        }
+    }
+
     private void computeGeneralDirRanking() {
         HashMap<TWDirection, Integer> scores = new HashMap<>();
         scores.put(TWDirection.N, 0);
@@ -459,18 +498,19 @@ public class GYAgent extends TWAgent {
 
         // scores from distance to fuel station
         TWDirection[] ranking = new TWDirection[4];
+
         if (fuelLevel <= 500 && fuelLevel >= 400) { // away from fuel station
             ranking = rankDirections(x, y, fuelStationX, fuelStationY);
-            addScores(scores, ranking, 6, 5, -6, -5);
-        } else if (fuelLevel >= 300 && fuelLevel <= 400) {
-            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
             addScores(scores, ranking, 3, 2, -2, -3);
-        } else if (fuelLevel >= 200 && fuelLevel <= 300) {
+//        } else if (fuelLevel >= 300 && fuelLevel <= 400) {
+//            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
+//            addScores(scores, ranking, 3, 2, -2, -3);
+//        } else if (fuelLevel >= 200 && fuelLevel <= 300) {
 //            ranking = rankDirections(x, y, fuelStationX, fuelStationY);
 //            addScores(scores, ranking, 0, 0, 0, 0);
         } else if (fuelLevel >= 100 && fuelLevel <= 200) {
             ranking = rankDirections(x, y, fuelStationX, fuelStationY);
-            addScores(scores, ranking, -3, -2, 2, 3);
+            addScores(scores, ranking, -4, -3, 3, 4);
         } else if (fuelLevel <= 100) {
             ranking = rankDirections(x, y, fuelStationX, fuelStationY);
             addScores(scores, ranking, -6, -5, 5, 6);
@@ -496,7 +536,10 @@ public class GYAgent extends TWAgent {
             addScores(scores, ranking, 2, 1, -1, -2);
         } // don't set the upper limit too high so that agents will not be pushed to corner
 
-
+        // scores to go to fixed location
+        int[] fixedLoc = goLoc1 == true ? fixedLoc1 : fixedLoc2;
+        ranking = rankDirections(x,y,fixedLoc[0], fixedLoc[1]); //the ranking is to go away
+        addScores(scores, ranking, -5, -4, 4,5);
 
         // get the final ranking based on scores
         ArrayList<TWDirection> finalRanking = new ArrayList<>();
@@ -515,10 +558,10 @@ public class GYAgent extends TWAgent {
         scores.put(ranking[1], scores.get(ranking[1]) + score2);
         scores.put(ranking[2], scores.get(ranking[2]) + score3);
         scores.put(ranking[3], scores.get(ranking[3]) + score4);
-
     }
 
     private TWDirection[] rankDirections(int x, int y, int targetX, int targetY) {
+        // Attaction, should go shorter edge first; for seperation, should go longer edge first. Attraction is dominated here.
         TWDirection[] ranking = null;
         int xDiff = x - targetX;
         int yDiff = y - targetY;
@@ -528,13 +571,13 @@ public class GYAgent extends TWAgent {
 //        }
         if (xDiff > 0) { // go E
             if (yDiff < 0) { //go N
-                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                if (Math.abs(xDiff) < Math.abs(yDiff)) { //North-South is the longer edge, move first
                     ranking = new TWDirection[]{TWDirection.N, TWDirection.E, TWDirection.W, TWDirection.S};
                 } else {
                     ranking = new TWDirection[]{TWDirection.E, TWDirection.N, TWDirection.S, TWDirection.W};
                 }
             } else { // go S
-                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                if (Math.abs(xDiff) < Math.abs(yDiff)) { // (previously) North-South is the shorter edge, N/S first, cover more space
                     ranking = new TWDirection[]{TWDirection.S, TWDirection.E, TWDirection.W, TWDirection.N};
                 } else {
                     ranking = new TWDirection[]{TWDirection.E, TWDirection.S, TWDirection.N, TWDirection.W};
@@ -542,13 +585,13 @@ public class GYAgent extends TWAgent {
             }
         } else { // go W
             if (yDiff < 0) { // go N
-                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                if (Math.abs(xDiff) < Math.abs(yDiff)) { // (previously) North-South is the shorter edge, N/S first, cover more space
                     ranking = new TWDirection[]{TWDirection.N, TWDirection.W, TWDirection.E, TWDirection.S};
                 } else {
                     ranking = new TWDirection[]{TWDirection.W, TWDirection.N, TWDirection.S, TWDirection.E};
                 }
             } else { //go S
-                if (Math.abs(xDiff) > Math.abs(yDiff)) { //North-South is the shorter edge, N/S first, cover more space
+                if (Math.abs(xDiff) < Math.abs(yDiff)) { // (previously) North-South is the shorter edge, N/S first, cover more space
                     ranking = new TWDirection[]{TWDirection.S, TWDirection.W, TWDirection.E, TWDirection.N};
                 } else {
                     ranking = new TWDirection[]{TWDirection.W, TWDirection.S, TWDirection.N, TWDirection.E};
@@ -656,6 +699,7 @@ public class GYAgent extends TWAgent {
     }
 
     private TWThought planGreedy(){
+        checkSwitchTarget(); // if it gets near to a target, should switch to another target
         computeGeneralDirRanking(); // update generalDir
         if (this.name == "agent1") System.out.println("memory size: " + memory.getMemorySize() + " carried Tiles: " + carriedTiles.size());
         if (memory.getMemorySize() == 0) {

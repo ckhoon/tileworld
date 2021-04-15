@@ -14,6 +14,7 @@ package tileworld;
  * Environment related parameters are still in the TWEnvironment class.
  *
  */
+
 //public class Parameters {
 //
 //    //Simulation Parameters
@@ -63,5 +64,5 @@ public class Parameters {
     public static final double holeDev = 0.5f;
     public static final double obstacleDev = 0.5f;
     // the life time of each object
-    public static final int lifeTime = 100;
+    public static final int lifeTime = 30;
 }
