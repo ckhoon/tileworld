@@ -84,19 +84,11 @@ public class ZZAgent extends TWAgent {
 //        this.memory = new TWAgentWorkingMemory(this, env.schedule, env.getxDimension(), env.getyDimension());
         int xDim = getEnvironment().getxDimension();
         int yDim = getEnvironment().getyDimension();
-        if (name.equals("agent1")) {
-            fixedLoc1 = new int[]{xDim/8, yDim/6};
-            fixedLoc2 = new int[]{xDim*3/8, yDim/6};
-            fixedLoc3 = new int[]{xDim*2/8, yDim*4/6};
-        } else if (name.equals("agent2")) {
-            fixedLoc1 = new int[]{xDim*5/8, yDim/6};
-            fixedLoc2 = new int[]{xDim*7/8, yDim/6};
-            fixedLoc3 = new int[]{xDim*6/8, yDim*4/6};
-        } else if (name.equals("agent3")) {
-            fixedLoc1 = new int[]{xDim*1/8, yDim*5/6};
-            fixedLoc2 = new int[]{xDim*4/8, yDim*4/6};
-            fixedLoc3 = new int[]{xDim*7/8, yDim*5/6};
-        }
+
+        fixedLoc1 = new int[]{xDim*1/8, yDim*5/6};
+        fixedLoc2 = new int[]{xDim*4/8, yDim*4/6};
+        fixedLoc3 = new int[]{xDim*7/8, yDim*5/6};
+
         System.out.println("fixed 1 " + fixedLoc1[0] + " " + fixedLoc1[1]);
         System.out.println("fixed 2 " + fixedLoc2[0] + " " + fixedLoc2[1]);
         System.out.println("fixed 3 " + fixedLoc3[0] + " " + fixedLoc3[1]);
@@ -125,7 +117,6 @@ public class ZZAgent extends TWAgent {
         //System.out.println("____________________________________________________________________________________________");
 
         if (fuelStationX != -1) distanceToFuelStation = (int)astarPath.getMovementCost(x,y,fuelStationX,fuelStationY);
-        checkLowFuelLevel(); // if fuel level < 50 or fuel level < 2 * distance, change to low_fuel mode
 
         switch(state){
             case SPLIT_REGION:
@@ -138,6 +129,7 @@ public class ZZAgent extends TWAgent {
                 thought = planFindFuelStation();
                 break;
             case PLAN_GREEDY:
+                checkLowFuelLevel(); // if fuel level < 50 or fuel level < 2 * distance, change to low_fuel mode
                 sendMyLocation();
                 thought = planGreedy();
                 break;
