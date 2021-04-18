@@ -754,8 +754,8 @@ public class GYAgent extends TWAgent {
             }
         }
         if (name == "agent1") System.out.println("go general direction");
-
-        //System.out.println("Default case, Simple Score: " + this.score);
+        System.out.println("++++++++++++++++++++"+this.name);
+        System.out.println("Default case, Simple Score: " + this.score);
         //System.out.println("FUEL level:"+this.fuelLevel);
         // default case, go general direction
         goGeneralDirection = true;

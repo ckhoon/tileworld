@@ -14,7 +14,7 @@ package tileworld;
  * Environment related parameters are still in the TWEnvironment class.
  *
  */
-
+//
 //public class Parameters {
 //
 //    //Simulation Parameters
